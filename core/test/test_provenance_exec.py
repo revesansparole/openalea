@@ -59,6 +59,45 @@ def test_prov_exec_init():
     assert id(prov.dataflow()) == id(df)
 
 
+def test_prov_exec_clock():
+    df, (pid_in, pid_out) = get_dataflow()
+    prov = ProvenanceExec(df)
+
+    t1 = prov.clock()
+    assert prov.clock() > t1
+
+
+def test_prov_exec_contains():
+    df, (pid_in, pid_out) = get_dataflow()
+    dfs = DataflowState(df)
+
+    prov = ProvenanceExec(df)
+    assert not 0 in prov
+
+    prov.store(0, dfs)
+
+    assert 0 in prov
+
+
+def test_prov_exec_record_task():
+    df, (pid_in, pid_out) = get_dataflow()
+    dfs = DataflowState(df)
+
+    prov = ProvenanceExec(df)
+    prov.record_task(0, 0, 1, 2)
+
+    assert_raises(KeyError, lambda: prov.record_task(0, 0, 1, 2))
+    assert_raises(KeyError, lambda: prov.record_task(0, 0, 2, 3))
+    prov.record_task(0, 1, 3, 4)
+    prov.record_task(1, 0, 4, 5)
+
+    assert prov.get_task(0, 0) == (1,2)
+    assert prov.get_task(0, 1) == (3,4)
+    assert prov.get_task(1, 0) == (4,5)
+    assert_raises(KeyError, lambda: prov.get_task(1,1))
+    assert_raises(KeyError, lambda: prov.get_task(2,0))
+
+
 def test_prov_exec_store():
     df, (pid_in, pid_out) = get_dataflow()
     dfs = DataflowState(df)

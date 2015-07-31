@@ -9,7 +9,7 @@ from openalea.core.node import Node, FuncNode
 
 
 def print_func(*args):
-    print args
+    print "print_func", args
 
 
 def fixed_function():
@@ -64,7 +64,7 @@ def test_dataflow_evaluation_eval_init():
     df, (pid_in, pid_out) = get_dataflow()
     algo = BruteEvaluation(df)
 
-    env = 0
+    env = None
     dfs = DataflowState(df)
     assert_raises(UserWarning, lambda: algo.eval(env, dfs))
 
@@ -73,7 +73,7 @@ def test_dataflow_evaluation_eval():
     df, (pid_in, pid_out) = get_dataflow()
     algo = BruteEvaluation(df)
 
-    env = 0
+    env = None
     dfs = DataflowState(df)
     dfs.set_data(pid_in, 1)
 
@@ -86,7 +86,7 @@ def test_dataflow_evaluation_eval_no_vid():
     df, (pid_in, pid_out) = get_dataflow()
     algo = BruteEvaluation(df)
 
-    env = 0
+    env = None
     dfs = DataflowState(df)
     dfs.set_data(pid_in, 1)
 
@@ -108,7 +108,7 @@ def test_dataflow_evaluation_eval_no_vid2():
     df.set_actor(vid1, FuncNode({}, {}, int))
 
     dfs = DataflowState(df)
-    env = 0
+    env = None
     algo = BruteEvaluation(df)
 
     dfs.set_data(pid0, 0)
@@ -129,7 +129,7 @@ def test_dataflow_evaluation_single_input_single_output():
     df.set_actor(vid, FuncNode({}, {}, operator.add))
 
     dfs = DataflowState(df)
-    env = 0
+    env = None
     algo = BruteEvaluation(df)
 
     dfs.set_data(pid0, 1)
@@ -149,7 +149,7 @@ def test_dataflow_evaluation_single_input_no_output():
     df.set_actor(vid, FuncNode({}, {}, print_func))
 
     dfs = DataflowState(df)
-    env = 0
+    env = None
     algo = BruteEvaluation(df)
 
     dfs.set_data(pid0, 1)
@@ -172,7 +172,7 @@ def test_dataflow_evaluation_no_input_two_outputs():
     df.set_actor(vid, FuncNode({}, {}, double_fixed_function))
 
     dfs = DataflowState(df)
-    env = 0
+    env = None
     algo = BruteEvaluation(df)
 
     algo.eval(env, dfs, vid)
@@ -190,3 +190,19 @@ def test_dataflow_evaluation_no_input_two_outputs():
     dfs.reinit()
     pid2 = df.add_out_port(vid, "out3")
     assert_raises(UserWarning, lambda: algo.eval(env, dfs, vid))
+
+
+def test_dataflow_evaluation_multiple_runs():
+    df, (pid_in, pid_out) = get_dataflow()
+    algo = BruteEvaluation(df)
+
+    dfs = DataflowState(df)
+
+    for i in range(3):
+        dfs.reinit()
+        dfs.set_data(pid_in, i)
+        print dict(dfs.items())
+
+        algo.clear()
+        algo.eval(None, dfs)
+        assert dfs.is_valid()

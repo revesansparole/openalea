@@ -21,7 +21,9 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 
-from openalea.core.dataflow_state import DataflowState
+from time import clock
+
+from dataflow_state import DataflowState
 
 
 class ProvenanceExec(object):
@@ -35,17 +37,30 @@ class ProvenanceExec(object):
             - dataflow (DataFlow): the dataflow to survey
         """
         self._dataflow = dataflow
+        self._time = {}
         self._stored = {}
+
+    def clock(self):
+        """ Convenience function provided
+        to ensure everybody use the same time function.
+        """
+        return clock()
 
     def clear(self):
         """ Remove all data stored in the provenance.
         """
+        self._time.clear()
         self._stored.clear()
 
     def dataflow(self):
         """ Return reference on surveyed dataflow.
         """
         return self._dataflow
+
+    def __contains__(self, exec_id):
+        """ Test wether the given exec_id has been stored already.
+        """
+        return exec_id in self._stored
 
     def get_state(self, exec_id, state=None):
         """ Retrieve the state associated with a given execution.
@@ -70,7 +85,35 @@ class ProvenanceExec(object):
 
         return state
 
-    def store (self, exec_id, state):
+    def get_task(self, exec_id, vid):
+        """ Retrieve stored time of execution for a given task.
+
+        args:
+            - exec_id (eid): id of execution
+            - vid (vid): if of task
+
+        return:
+            - (float, float): (t_start, t_end)
+        """
+        return self._time[exec_id][vid]
+
+    def record_task(self, exec_id, vid, t_start, t_end):
+        """ Register execution times of a task.
+
+        args:
+            - exec_id (eid): current execution
+            - vid (vid): id of task performed
+            - t_start (float): time of beginning of task
+            - t_end (float): time of end of task
+        """
+        td = self._time.setdefault(exec_id, {})
+        if vid in td:
+            raise KeyError("Task already registered during this execution")
+
+        td[vid] = (t_start, t_end)
+
+
+    def store(self, exec_id, state):
         """ Store a copy of state.
 
         args:

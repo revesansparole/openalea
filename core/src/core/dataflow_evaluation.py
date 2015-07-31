@@ -82,9 +82,16 @@ class BruteEvaluation(AbstractEvaluation):
             leaves = [vid for vid in df.vertices() if df.nb_out_edges(vid) == 0]
             # TODO: sort leaves
             for vid in leaves:
-                self.eval_from_node(env, state, vid)
+                if vid not in self._evaluated:
+                    self.eval_from_node(env, state, vid)
         else:
-            self.eval_from_node(env, state, vid)
+            if vid not in self._evaluated:
+                self.eval_from_node(env, state, vid)
+
+        # provenance
+        if env is not None and env.record_provenance():
+            prov = env.provenance()
+            prov.store(env.current_execution(), state)
 
     def eval_from_node(self, env, state, vid):
         """ Evaluate dataflow from a given node.
@@ -116,8 +123,18 @@ class BruteEvaluation(AbstractEvaluation):
         # find input values
         inputs = [state.get_data(pid) for pid in df.in_ports(vid)]
 
+        # provenance
+        if env is not None and env.record_provenance():
+            t_start = env.provenance().clock()
+
         # perform computation
         vals = df.actor(vid)(inputs)
+
+        # provenance
+        if env is not None and env.record_provenance():
+            prov = env.provenance()
+            t_end = prov.clock()
+            prov.record_task(env.current_execution(), vid, t_start, t_end)
 
         # affect return values to output ports
         pids = tuple(df.out_ports(vid))
