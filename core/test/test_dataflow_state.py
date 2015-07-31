@@ -32,6 +32,7 @@ def get_dataflow():
     pids = [pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51]
     return df, vids, pids
 
+
 def test_dataflow_state_init():
     df, vids, pids = get_dataflow()
     dfs = DataflowState(df)
@@ -193,4 +194,3 @@ def test_dataflow_state_changed():
     dfs.set_changed(pid21, False)
     assert not dfs.has_changed(pid21)
     assert dfs.has_changed(pid10)
-

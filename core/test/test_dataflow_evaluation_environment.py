@@ -7,7 +7,7 @@ from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
 def test_evaluation_environment_init():
     env = EvaluationEnvironment()
 
-    assert env.current_execution() == 0
+    assert env.current_execution() is None
     assert not env.record_provenance()
     assert env.provenance() is None
 
@@ -18,4 +18,6 @@ def test_evaluation_environment_set_provenance():
 
     env.set_provenance(df)
     assert env.record_provenance()
-    assert env.provenance() is not None
+    prov = env.provenance()
+    assert prov is not None
+    assert env.current_execution() in prov.execution_graph()

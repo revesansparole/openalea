@@ -29,7 +29,7 @@ class EvaluationEnvironment(object):
     """
     def __init__(self):
         """ Constructor """
-        self._exec_id = 0
+        self._exec_id = None
         self._record_prov = False
         self._prov = None
 
@@ -41,7 +41,7 @@ class EvaluationEnvironment(object):
     def new_execution(self):
         """ Change execution id to a new unused id.
         """
-        self._exec_id += 1
+        self._exec_id = self._prov.new_execution()
 
     def record_provenance(self):
         """ Return wether or not execution provenance
@@ -62,3 +62,4 @@ class EvaluationEnvironment(object):
         """
         self._prov = ProvenanceExec(dataflow)
         self._record_prov = True
+        self._exec_id = self._prov.new_execution()

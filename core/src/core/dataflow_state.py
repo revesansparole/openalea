@@ -34,7 +34,7 @@ class DataflowState(object):
         self._state = {}
         self._changed = {}
 
-    def dataflow (self):
+    def dataflow(self):
         return self._dataflow
 
     def clear(self):
@@ -161,7 +161,7 @@ class DataflowState(object):
         # by default data are tagged as changed
         self._changed[pid] = True
 
-    def update(self, data):
+    def update(self, data):  # TODO: raise Deprecated since flag has_changed
         """ Update the state with data.
 
         Same operation than dict.update(dict)
