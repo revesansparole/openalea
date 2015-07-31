@@ -33,6 +33,9 @@ class DataflowState(object):
         self._dataflow = dataflow
         self._state = {}
 
+    def dataflow (self):
+        return self._dataflow
+
     def clear(self):
         """Clear state
         """
@@ -108,6 +111,13 @@ class DataflowState(object):
 
         return cmp(pid1, pid2)
 
+    def items(self):
+        """ Iterate on all pid, values stored in this state.
+
+        yield: (pid, value)
+        """
+        return self._state.items()
+
     def get_data(self, pid):
         """ Retrieve data associated with a port.
 
@@ -146,3 +156,13 @@ class DataflowState(object):
             - data (any)
         """
         self._state[pid] = data
+
+    def update(self, data):
+        """ Update the state with data.
+
+        Same operation than dict.update(dict)
+
+        args:
+            - data (dict): new data to store in state
+        """
+        self._state.update(data)
