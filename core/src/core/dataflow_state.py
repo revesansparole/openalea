@@ -32,6 +32,7 @@ class DataflowState(object):
         """
         self._dataflow = dataflow
         self._state = {}
+        self._changed = {}
 
     def dataflow (self):
         return self._dataflow
@@ -40,6 +41,7 @@ class DataflowState(object):
         """Clear state
         """
         self._state.clear()
+        self._changed.clear()
 
     def reinit(self):
         """ Remove all data stored except for the one
@@ -156,6 +158,8 @@ class DataflowState(object):
             - data (any)
         """
         self._state[pid] = data
+        # by default data are tagged as changed
+        self._changed[pid] = True
 
     def update(self, data):
         """ Update the state with data.
@@ -166,3 +170,25 @@ class DataflowState(object):
             - data (dict): new data to store in state
         """
         self._state.update(data)
+
+    def has_changed(self, pid):
+        """ Return wether data has been modified in this state.
+
+        Data in a state can either:
+         - be set by user, in which case they are tagged as changed
+         - be newly computed by some node, also tagged as changed
+         - stay unchanged from some previous computation
+         """
+        return self._changed[pid]
+
+    def set_changed(self, pid, flag):
+        """ Set the changed property of a data on a port.
+
+        args:
+            - pid (pid): id of port where data is stored
+            - flag (True|False): changed or unchanged
+        """
+        if pid not in self._state:
+            raise KeyError("no data on given port")
+
+        self._changed[pid] = flag

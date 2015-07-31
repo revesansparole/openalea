@@ -5,138 +5,7 @@ from openalea.core.dataflow_state import DataflowState
 from openalea.core.node import Node
 
 
-def test_dataflow_state_init():
-    df = DataFlow()
-    vid1 = df.add_vertex()
-    df.add_in_port(vid1, "in")
-    pid11 = df.add_out_port(vid1, "out")
-    vid2 = df.add_vertex()
-    pid21 = df.add_out_port(vid2, "out")
-
-    vid3 = df.add_vertex()
-    pid31 = df.add_in_port(vid3, "in1")
-    pid32 = df.add_in_port(vid3, "in2")
-    pid33 = df.add_out_port(vid3, "res")
-
-    vid4 = df.add_vertex()
-    pid41 = df.add_in_port(vid4, "in")
-
-    df.connect(pid11, pid31)
-    df.connect(pid21, pid32)
-    df.connect(pid33, pid41)
-
-    dfs = DataflowState(df)
-    dfs.clear()
-
-    assert len(dfs._state) == 0
-    assert id(dfs.dataflow()) == id(df)
-
-
-def test_dataflow_state_reinit():
-    df = DataFlow()
-    vid1 = df.add_vertex()
-    pid10 = df.add_in_port(vid1, "in")
-    pid11 = df.add_out_port(vid1, "out")
-    vid2 = df.add_vertex()
-    pid21 = df.add_out_port(vid2, "out")
-
-    vid3 = df.add_vertex()
-    pid31 = df.add_in_port(vid3, "in1")
-    pid32 = df.add_in_port(vid3, "in2")
-    pid33 = df.add_out_port(vid3, "res")
-
-    vid4 = df.add_vertex()
-    pid41 = df.add_in_port(vid4, "in")
-
-    df.connect(pid11, pid31)
-    df.connect(pid21, pid32)
-    df.connect(pid33, pid41)
-
-    dfs = DataflowState(df)
-
-    dfs.set_data(pid10, 0)
-
-    for i, pid in enumerate([pid11, pid21, pid33]):
-        dfs.set_data(pid, i)
-
-    dfs.reinit()
-    assert dfs.is_ready_for_evaluation()
-    for pid in (pid11, pid21, pid33):
-        assert_raises(KeyError, lambda: dfs.get_data(pid))
-
-
-def test_dataflow_state_is_ready_for_evaluation():
-    df = DataFlow()
-    vid1 = df.add_vertex()
-    pid10 = df.add_in_port(vid1, "in")
-    pid11 = df.add_out_port(vid1, "out")
-    vid2 = df.add_vertex()
-    pid21 = df.add_out_port(vid2, "out")
-
-    vid3 = df.add_vertex()
-    pid31 = df.add_in_port(vid3, "in1")
-    pid32 = df.add_in_port(vid3, "in2")
-    pid33 = df.add_out_port(vid3, "res")
-
-    vid4 = df.add_vertex()
-    pid41 = df.add_in_port(vid4, "in")
-
-    df.connect(pid11, pid31)
-    df.connect(pid21, pid32)
-    df.connect(pid33, pid41)
-
-    dfs = DataflowState(df)
-
-    assert not dfs.is_ready_for_evaluation()
-
-    dfs.set_data(pid10, 0)
-
-    assert dfs.is_ready_for_evaluation()
-
-    dfs.clear()
-    for i, pid in enumerate([pid11, pid21, pid33]):
-        dfs.set_data(pid, i)
-        assert not dfs.is_ready_for_evaluation()
-
-
-def test_dataflow_state_is_valid():
-    df = DataFlow()
-    vid1 = df.add_vertex()
-    pid10 = df.add_in_port(vid1, "in")
-    pid11 = df.add_out_port(vid1, "out")
-    vid2 = df.add_vertex()
-    pid21 = df.add_out_port(vid2, "out")
-
-    vid3 = df.add_vertex()
-    pid31 = df.add_in_port(vid3, "in1")
-    pid32 = df.add_in_port(vid3, "in2")
-    pid33 = df.add_out_port(vid3, "res")
-
-    vid4 = df.add_vertex()
-    pid41 = df.add_in_port(vid4, "in")
-
-    df.connect(pid11, pid31)
-    df.connect(pid21, pid32)
-    df.connect(pid33, pid41)
-
-    dfs = DataflowState(df)
-
-    assert not dfs.is_valid()
-
-    dfs.set_data(pid10, 0)
-
-    assert not dfs.is_valid()
-
-    dfs.clear()
-    for i, pid in enumerate([pid11, pid21, pid33]):
-        dfs.set_data(pid, i)
-        assert not dfs.is_valid()
-
-    dfs.set_data(pid10, 'a')
-    assert dfs.is_valid()
-
-
-def test_dataflow_state_items():
+def get_dataflow():
     df = DataFlow()
     vid1 = df.add_vertex()
     pid10 = df.add_in_port(vid1, "in")
@@ -159,6 +28,76 @@ def test_dataflow_state_items():
     df.connect(pid33, pid41)
     df.connect(pid51, pid32)
 
+    vids = [vid1, vid2, vid3, vid4, vid5]
+    pids = [pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51]
+    return df, vids, pids
+
+def test_dataflow_state_init():
+    df, vids, pids = get_dataflow()
+    dfs = DataflowState(df)
+    dfs.clear()
+
+    assert len(dfs._state) == 0
+    assert id(dfs.dataflow()) == id(df)
+
+
+def test_dataflow_state_reinit():
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
+
+    dfs = DataflowState(df)
+
+    dfs.set_data(pid10, 0)
+
+    for i, pid in enumerate([pid11, pid21, pid33]):
+        dfs.set_data(pid, i)
+
+    dfs.reinit()
+    assert dfs.is_ready_for_evaluation()
+    for pid in (pid11, pid21, pid33):
+        assert_raises(KeyError, lambda: dfs.get_data(pid))
+
+
+def test_dataflow_state_is_ready_for_evaluation():
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
+    dfs = DataflowState(df)
+
+    assert not dfs.is_ready_for_evaluation()
+
+    dfs.set_data(pid10, 0)
+
+    assert dfs.is_ready_for_evaluation()
+
+    dfs.clear()
+    for i, pid in enumerate([pid11, pid21, pid33]):
+        dfs.set_data(pid, i)
+        assert not dfs.is_ready_for_evaluation()
+
+
+def test_dataflow_state_is_valid():
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
+    dfs = DataflowState(df)
+
+    assert not dfs.is_valid()
+
+    dfs.set_data(pid10, 0)
+
+    assert not dfs.is_valid()
+
+    dfs.clear()
+    for i, pid in enumerate([pid11, pid21, pid33, pid51]):
+        dfs.set_data(pid, i)
+        assert not dfs.is_valid()
+
+    dfs.set_data(pid10, 'a')
+    assert dfs.is_valid()
+
+
+def test_dataflow_state_items():
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
     dfs = DataflowState(df)
 
     assert len(tuple(dfs.items())) == 0
@@ -177,28 +116,9 @@ def test_dataflow_state_items():
 
 
 def test_dataflow_state_get_data():
-    df = DataFlow()
-    vid1 = df.add_vertex()
-    pid10 = df.add_in_port(vid1, "in")
-    pid11 = df.add_out_port(vid1, "out")
-    vid2 = df.add_vertex()
-    pid21 = df.add_out_port(vid2, "out")
-    vid5 = df.add_vertex()
-    pid51 = df.add_out_port(vid5, "out")
-
-    vid3 = df.add_vertex()
-    pid31 = df.add_in_port(vid3, "in1")
-    pid32 = df.add_in_port(vid3, "in2")
-    pid33 = df.add_out_port(vid3, "res")
-
-    vid4 = df.add_vertex()
-    pid41 = df.add_in_port(vid4, "in")
-
-    df.connect(pid11, pid31)
-    df.connect(pid21, pid32)
-    df.connect(pid33, pid41)
-    df.connect(pid51, pid32)
-
+    df, vids, pids = get_dataflow()
+    vid1, vid2, vid3, vid4, vid5 = vids
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
     dfs = DataflowState(df)
 
     for pid in df.ports():
@@ -234,28 +154,8 @@ def test_dataflow_state_get_data():
 
 
 def test_dataflow_state_update():
-    df = DataFlow()
-    vid1 = df.add_vertex()
-    pid10 = df.add_in_port(vid1, "in")
-    pid11 = df.add_out_port(vid1, "out")
-    vid2 = df.add_vertex()
-    pid21 = df.add_out_port(vid2, "out")
-    vid5 = df.add_vertex()
-    pid51 = df.add_out_port(vid5, "out")
-
-    vid3 = df.add_vertex()
-    pid31 = df.add_in_port(vid3, "in1")
-    pid32 = df.add_in_port(vid3, "in2")
-    pid33 = df.add_out_port(vid3, "res")
-
-    vid4 = df.add_vertex()
-    pid41 = df.add_in_port(vid4, "in")
-
-    df.connect(pid11, pid31)
-    df.connect(pid21, pid32)
-    df.connect(pid33, pid41)
-    df.connect(pid51, pid32)
-
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
     dfs = DataflowState(df)
 
     d = dict((pid, i) for i, pid in enumerate([pid11, pid21, pid33, pid51]))
@@ -274,3 +174,23 @@ def test_dataflow_state_update():
         assert dfs.get_data(pid) == i
 
     assert dfs.get_data(pid10) == 'a'
+
+
+def test_dataflow_state_changed():
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
+    dfs = DataflowState(df)
+
+    dfs.set_data(pid10, 'a')
+    assert dfs.has_changed(pid10)
+    assert_raises(KeyError, lambda: dfs.has_changed(pid11))
+    assert_raises(KeyError, lambda: dfs.set_changed(pid51, False))
+
+    for pid in pids[1:]:
+        dfs.set_data(pid, pid)
+        assert dfs.has_changed(pid)
+
+    dfs.set_changed(pid21, False)
+    assert not dfs.has_changed(pid21)
+    assert dfs.has_changed(pid10)
+
