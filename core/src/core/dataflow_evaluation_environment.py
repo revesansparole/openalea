@@ -38,10 +38,13 @@ class EvaluationEnvironment(object):
         """
         return self._exec_id
 
-    def new_execution(self):
+    def new_execution(self, exec_id=None):
         """ Change execution id to a new unused id.
+
+        arg:
+            - exec_id (eid): id of parent execution
         """
-        self._exec_id = self._prov.new_execution()
+        self._exec_id = self._prov.new_execution(exec_id)
 
     def record_provenance(self):
         """ Return wether or not execution provenance
@@ -62,4 +65,4 @@ class EvaluationEnvironment(object):
         """
         self._prov = ProvenanceExec(dataflow)
         self._record_prov = True
-        self._exec_id = self._prov.new_execution()
+        self._exec_id = None#self._prov.new_execution()

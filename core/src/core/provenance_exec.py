@@ -21,8 +21,6 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 
-from time import clock
-
 from dataflow_state import DataflowState
 from graph import Graph
 
@@ -39,20 +37,12 @@ class ProvenanceExec(object):
         """
         self._dataflow = dataflow
         self._exec_graph = Graph()
-        self._time = {}
         self._stored = {}
-
-    def clock(self):
-        """ Convenience function provided
-        to ensure everybody use the same time function.
-        """
-        return clock()
 
     def clear(self):
         """ Remove all data stored in the provenance.
         """
         self._exec_graph.clear()
-        self._time.clear()
         self._stored.clear()
 
     def dataflow(self):
@@ -118,7 +108,7 @@ class ProvenanceExec(object):
 
         return:
             - state (DataFlowState): newly created if state is None or
-                                     same as state but updated.
+                                     use state but clear it first.
         """
         if state is None:
             state = DataflowState(self.dataflow())
@@ -126,9 +116,16 @@ class ProvenanceExec(object):
             assert state.dataflow() == self.dataflow()
 
         state.clear()
-        for pid, (changed, data) in self._stored[exec_id].items():
+        dp, dv = self._stored[exec_id]
+        for pid, (changed, data) in dp.items():
             state.set_data(pid, data)
             state.set_changed(pid, changed)
+
+        for vid, (tinit, tend) in dv.items():
+            if tinit is not None:
+                state.set_task_start_time(vid, tinit)
+            if tend is not None:
+                state.set_task_end_time(vid, tend)
 
         return state
 
@@ -145,38 +142,115 @@ class ProvenanceExec(object):
         if exec_id not in self._exec_graph:
             raise KeyError("execution id hasn't been recorded")
 
-        d = {}
+        dv = dict(state.tasks() )
+        dp = {}
         for pid, data in state.items():
-            d[pid] = (state.has_changed(pid), data)
+            dp[pid] = (state.has_changed(pid), data)
 
-        self._stored[exec_id] = d
+        self._stored[exec_id] = (dp, dv)
 
-    def get_task(self, exec_id, vid):
-        """ Retrieve stored time of execution for a given task.
+    def last_evaluation(self, vid, exec_id=None):
+        """ Find last execution id where node has been evaluated.
+
+        Usefull with lazy evaluations.
 
         args:
-            - exec_id (eid): id of execution
-            - vid (vid): if of task
+            - vid (vid): id of node to check
+            - exec_id (eid): execution to start the search
+                             if None will start from leaf of the graph
+                             or raise an error if there is multiple leaves.
 
         return:
-            - (float, float): (t_start, t_end)
+            - eid (eid): id of execution where evaluation of node
+                         actually occured for the last time
         """
-        return self._time[exec_id][vid]
+        g = self._exec_graph
 
-    def record_task(self, exec_id, vid, t_start, t_end):
-        """ Register execution times of a task.
+        if exec_id is None:
+            # find leaves of the execution graph
+            leaves = [eid for eid in g.vertices() if g.nb_out_edges(eid) == 0]
+            print "leaves", leaves, tuple(g.vertices())
+            if len(leaves) == 0:
+                raise UserWarning("no execution recorded yet")
+            elif len(leaves) > 1:
+                msg = "function ambiguous, need to specify a branch"
+                raise UserWarning(msg)
+            else:
+                exec_id, = leaves
+
+        state = self.get_state(exec_id)
+        if state.task_start_time(vid) is None:
+            if g.nb_in_neighbors(exec_id) == 0:
+                raise UserWarning("no valid evaluation found")
+
+            p_exec, = tuple(g.in_neighbors(exec_id))
+            return self.last_evaluation(vid, p_exec)
+        else :
+            return exec_id
+
+    def last_change(self, pid, exec_id):
+        """ Find the last evaluation that changed this port.
 
         args:
-            - exec_id (eid): current execution
-            - vid (vid): id of task performed
-            - t_start (float): time of beginning of task
-            - t_end (float): time of end of task
+            - pid (pid): id of output port, or lonely input port, to look at
+            - exec_id (eid): id of execution that modifed this port data
         """
-        if exec_id not in self._exec_graph:
-            raise KeyError("execution id hasn't been recorded")
+        df = self._dataflow
+        g = self._exec_graph
 
-        td = self._time.setdefault(exec_id, {})
-        if vid in td:
-            raise KeyError("Task already registered during this execution")
+        state = self.get_state(exec_id)
 
-        td[vid] = (t_start, t_end)
+        if df.is_in_port(pid):
+            if df.nb_connections(pid) == 0:  # lonely input port
+                changed = state.has_changed(pid)
+                if changed or g.nb_in_neighbors(exec_id) == 0:
+                    return exec_id
+                else:
+                    p_exec, = tuple(g.in_neighbors(exec_id))
+                    return self.last_change(pid, p_exec)
+            else:
+                raise KeyError("unable to compute last change for in ports")
+        else:  # out port
+            changed = state.has_changed(pid)
+            if changed:
+                return exec_id
+            else:
+                parent_ids = tuple(g.in_neighbors(exec_id))
+                if len(parent_ids) == 0:
+                    raise UserWarning("data never changed????")
+                p_exec, = parent_ids
+                return self.last_change(pid, p_exec)
+
+
+    def provenance(self, pid, exec_id):
+        """ Find where does a data come from.
+
+        if pid is an input port:
+            - lonely port: return execution id when user set this port
+            - other: return list of output ports which made up this data
+        if pid is an output port:
+            return id of node that produced this data and execution
+
+        args:
+            - pid (pid): id of port on which resides the data.
+            - exec_id (eid): id of the execution for which data
+                            are on given port.
+
+        return:
+            - lonely input port: (None, exec_id)
+            - input port: (output_port1, ..., output_portN)
+            - output_port: (vid, exec_id)
+        """
+        df = self._dataflow
+
+        if exec_id not in self:
+            raise KeyError("execution not stored yet")
+
+        if df.is_in_port(pid):  # input port
+            if df.nb_connections(pid) == 0:  # lonely input port
+                return (None, self.last_change(pid, exec_id))
+            else :
+                return tuple(df.connected_ports(pid))
+        else:  # output port
+            vid = df.vertex(pid)
+            return (vid, self.last_evaluation(vid, exec_id))

@@ -41,6 +41,11 @@ class AbstractEvaluation(object):
         """
         self._dataflow = dataflow
 
+    def require_evaluation(self):
+        """ Return True if the associated dataflow need to be evaluated.
+        """
+        raise NotImplementedError()
+
     def eval(self, env, state, vid=None):
         """ Evaluate associated dataflow.
 
@@ -68,6 +73,9 @@ class BruteEvaluation(AbstractEvaluation):
         AbstractEvaluation.__init__(self, dataflow)
 
         self._evaluated = set()
+
+    def require_evaluation(self):
+        return len(self._evaluated) < self._dataflow.nb_vertices()
 
     def clear(self):
         AbstractEvaluation.clear(self)
@@ -122,19 +130,15 @@ class BruteEvaluation(AbstractEvaluation):
 
         # find input values
         inputs = [state.get_data(pid) for pid in df.in_ports(vid)]
-
-        # provenance
-        if env is not None and env.record_provenance():
-            t_start = env.provenance().clock()
+        #tag input values as unchanged if necessary
+        for pid in df.in_ports(vid):
+            if df.nb_connections(pid) == 0:
+                state.set_changed(pid, False)
 
         # perform computation
+        state.task_started(vid)
         vals = df.actor(vid)(inputs)
-
-        # provenance
-        if env is not None and env.record_provenance():
-            prov = env.provenance()
-            t_end = prov.clock()
-            prov.record_task(env.current_execution(), vid, t_start, t_end)
+        state.task_ended(vid)
 
         # affect return values to output ports
         pids = tuple(df.out_ports(vid))
@@ -152,16 +156,52 @@ class BruteEvaluation(AbstractEvaluation):
             raise UserWarning("mismatch nb out port vs. function result")
 
 
-# class LazyEvaluation(BruteEvaluation):
-#     """ For each evaluation reevaluate a node of the dataflow
-#     only if its inputs have changed or if it is tagged
-#     as not lazy.
-#     """
-#     def __init__(self, dataflow):
-#         BruteEvaluation.__init__(self, dataflow)
-#
-#         self._modified = {}
-#
-#     def clear(self):
-#         BruteEvaluation.clear(self)
-#         self._modified.clear()
+class LazyEvaluation(BruteEvaluation):
+    """ For each evaluation reevaluate a node of the dataflow
+    only if its inputs have changed or if it is tagged
+    as not lazy.
+    """
+    def __init__(self, dataflow):
+        BruteEvaluation.__init__(self, dataflow)
+
+    def eval_node(self, env, state, vid):
+        """ Evaluate a single node
+
+        call BruteEvaluation:
+            - if node is not lazy
+            - if node is lazy but inputs have changed
+        """
+        df = self._dataflow
+        node = df.actor(vid)
+
+        if node.is_lazy():
+            # case node has no inputs
+            if len(tuple(df.in_ports(vid))) == 0:
+                # check wether result has already been computed
+                if all(pid in state for pid in df.out_ports(vid)):
+                    # set task execution time to None
+                    state.set_task_start_time(vid, None)
+                    state.set_task_end_time(vid, None)
+
+                    # mark all outputs as unchanged
+                    for pid in df.out_ports(vid):
+                        state.set_changed(pid, False)
+
+                    return False
+                else:
+                    return BruteEvaluation.eval_node(self, env, state, vid)
+            # check if inputs have changed
+            elif any([state.input_has_changed(pid) for pid in df.in_ports(vid)]):
+                return BruteEvaluation.eval_node(self, env, state, vid)
+            else:
+                # set task execution time to None
+                state.set_task_start_time(vid, None)
+                state.set_task_end_time(vid, None)
+
+                # mark all outputs as unchanged
+                for pid in df.out_ports(vid):
+                    state.set_changed(pid, False)
+
+                return False
+        else:
+            return BruteEvaluation.eval_node(self, env, state, vid)

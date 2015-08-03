@@ -364,6 +364,9 @@ class Node(AbstractNode):
         """todo"""
         return self.internal_data.get("lazy", True)
 
+    def is_lazy(self):
+        return self.get_lazy()
+
     def set_lazy(self, data):
         """todo"""
         self.internal_data["lazy"] = data

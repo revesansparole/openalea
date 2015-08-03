@@ -4,7 +4,8 @@ import operator
 from openalea.core.dataflow import DataFlow
 from openalea.core.dataflow_state import DataflowState
 from openalea.core.dataflow_evaluation import (AbstractEvaluation,
-                                               BruteEvaluation)
+                                               BruteEvaluation,
+                                               LazyEvaluation)
 from openalea.core.node import Node, FuncNode
 
 
@@ -50,18 +51,19 @@ def get_dataflow():
 
 
 def test_dataflow_evaluation_init():
-    df, (pid_in, pid_out) = get_dataflow()
+    df = get_dataflow()[0]
     algo = AbstractEvaluation(df)
     assert_raises(NotImplementedError, lambda: algo.eval(0, None))
+    assert_raises(NotImplementedError, lambda: algo.require_evaluation())
 
     algo = BruteEvaluation(df)
     algo.clear()
 
-    assert len(algo._evaluated) == 0
+    assert algo.require_evaluation()
 
 
 def test_dataflow_evaluation_eval_init():
-    df, (pid_in, pid_out) = get_dataflow()
+    df = get_dataflow()[0]
     algo = BruteEvaluation(df)
 
     env = None
@@ -80,6 +82,7 @@ def test_dataflow_evaluation_eval():
     assert not dfs.is_valid()
     algo.eval(env, dfs, df.vertex(pid_out))
     assert dfs.is_valid()
+    assert not algo.require_evaluation()
 
 
 def test_dataflow_evaluation_eval_no_vid():
@@ -188,7 +191,7 @@ def test_dataflow_evaluation_no_input_two_outputs():
 
     algo.clear()
     dfs.reinit()
-    pid2 = df.add_out_port(vid, "out3")
+    df.add_out_port(vid, "out3")
     assert_raises(UserWarning, lambda: algo.eval(env, dfs, vid))
 
 
@@ -201,8 +204,357 @@ def test_dataflow_evaluation_multiple_runs():
     for i in range(3):
         dfs.reinit()
         dfs.set_data(pid_in, i)
-        print dict(dfs.items())
 
         algo.clear()
         algo.eval(None, dfs)
         assert dfs.is_valid()
+
+
+def test_dataflow_evaluation_lazy():
+    df, (pid_in, pid_out) = get_dataflow()
+    algo = LazyEvaluation(df)
+
+    dfs = DataflowState(df)
+
+    for i in range(3):
+        dfs.set_data(pid_in, i)
+
+        algo.clear()
+        algo.eval(None, dfs)
+        assert dfs.is_valid()
+
+
+def test_df_eval_lazy_single_node_lazy():
+    df = DataFlow()
+    vid = df.add_vertex()
+    pid0 = df.add_in_port(vid, "in")
+    pid1 = df.add_out_port(vid, "out")
+    df.set_actor(vid, FuncNode({}, {}, int))
+
+    algo = LazyEvaluation(df)
+    dfs = DataflowState(df)
+    dfs.set_data(pid0, 1)
+
+    assert df.actor(vid).is_lazy()
+    assert dfs.has_changed(pid0)
+
+    # first run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    t0 = dfs.task_start_time(vid)
+    assert t0 is not None
+    t1 = dfs.task_end_time(vid)
+    assert t1 is not None
+    assert dfs.get_data(pid1) == dfs.get_data(pid0)
+    assert not dfs.has_changed(pid0)
+    assert dfs.has_changed(pid1)
+
+    # second run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    assert dfs.task_start_time(vid) is None
+    assert dfs.task_end_time(vid) is None
+    assert not dfs.has_changed(pid0)
+    assert not dfs.has_changed(pid1)
+
+
+def test_df_eval_lazy_single_node_non_lazy():
+    df = DataFlow()
+    vid = df.add_vertex()
+    pid0 = df.add_in_port(vid, "in")
+    pid1 = df.add_out_port(vid, "out")
+    df.set_actor(vid, FuncNode({}, {}, int))
+    df.actor(vid).set_lazy(False)
+
+    algo = LazyEvaluation(df)
+    dfs = DataflowState(df)
+    dfs.set_data(pid0, 1)
+
+    assert not df.actor(vid).is_lazy()
+    assert dfs.has_changed(pid0)
+
+    # first run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    t0 = dfs.task_start_time(vid)
+    assert t0 is not None
+    t1 = dfs.task_end_time(vid)
+    assert t1 is not None
+    assert dfs.get_data(pid1) == dfs.get_data(pid0)
+    assert not dfs.has_changed(pid0)
+    assert dfs.has_changed(pid1)
+
+    # second run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    assert dfs.task_start_time(vid) is not None
+    assert dfs.task_start_time(vid) > t0
+    assert dfs.task_end_time(vid) is not None
+    assert dfs.task_end_time(vid) > t1
+    assert not dfs.has_changed(pid0)
+    assert dfs.has_changed(pid1)
+
+
+def test_df_eval_lazy_single_node_lazy_no_inports():
+    df = DataFlow()
+    vid = df.add_vertex()
+    pid = df.add_out_port(vid, "out")
+    df.set_actor(vid, FuncNode({}, {}, fixed_function))
+
+    algo = LazyEvaluation(df)
+    dfs = DataflowState(df)
+
+    assert df.actor(vid).is_lazy()
+
+    # first run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    t0 = dfs.task_start_time(vid)
+    assert t0 is not None
+    t1 = dfs.task_end_time(vid)
+    assert t1 is not None
+    dat = dfs.get_data(pid)
+    assert dfs.has_changed(pid)
+
+    # second run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    assert dfs.task_start_time(vid) is None
+    assert dfs.task_end_time(vid) is None
+    assert dfs.get_data(pid) == dat
+    assert not dfs.has_changed(pid)
+
+
+def test_df_eval_lazy_single_node_non_lazy_no_inports():
+    df = DataFlow()
+    vid = df.add_vertex()
+    pid = df.add_out_port(vid, "out")
+    df.set_actor(vid, FuncNode({}, {}, fixed_function))
+    df.actor(vid).set_lazy(False)
+
+    algo = LazyEvaluation(df)
+    dfs = DataflowState(df)
+
+    assert not df.actor(vid).is_lazy()
+
+    # first run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    t0 = dfs.task_start_time(vid)
+    assert t0 is not None
+    t1 = dfs.task_end_time(vid)
+    assert t1 is not None
+    dat = dfs.get_data(pid)
+    assert dfs.has_changed(pid)
+
+    # second run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    assert dfs.task_start_time(vid) is not None
+    assert dfs.task_start_time(vid) > t0
+    assert dfs.task_end_time(vid) is not None
+    assert dfs.task_end_time(vid) > t1
+    assert dfs.has_changed(pid)
+
+
+def test_df_eval_lazy_two_nodes_lazy():
+    df = DataFlow()
+    vid0 = df.add_vertex()
+    pid0 = df.add_in_port(vid0, "in")
+    pid1 = df.add_out_port(vid0, "out")
+    df.set_actor(vid0, FuncNode({}, {}, int))
+    vid1 = df.add_vertex()
+    pid2 = df.add_in_port(vid1, "in")
+    pid3 = df.add_out_port(vid1, "out")
+    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.connect(pid1, pid2)
+
+    algo = LazyEvaluation(df)
+    dfs = DataflowState(df)
+    dfs.set_data(pid0, 1)
+
+    assert df.actor(vid0).is_lazy()
+    assert df.actor(vid1).is_lazy()
+    assert dfs.has_changed(pid0)
+
+    # first run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    t0 = dfs.task_start_time(vid0)
+    assert t0 is not None
+    t1 = dfs.task_end_time(vid0)
+    assert t1 is not None
+    t2 = dfs.task_start_time(vid1)
+    assert t2 is not None
+    t3 = dfs.task_end_time(vid1)
+    assert t3 is not None
+    assert dfs.get_data(pid1) == dfs.get_data(pid0)
+    assert dfs.get_data(pid3) == dfs.get_data(pid0)
+    assert not dfs.has_changed(pid0)
+    assert dfs.has_changed(pid1)
+    assert dfs.input_has_changed(pid2)
+    assert dfs.has_changed(pid3)
+
+    # second run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    assert dfs.task_start_time(vid0) is None
+    assert dfs.task_end_time(vid0) is None
+    assert dfs.task_start_time(vid1) is None
+    assert dfs.task_end_time(vid1) is None
+    assert not dfs.has_changed(pid0)
+    assert not dfs.has_changed(pid1)
+    assert not dfs.input_has_changed(pid2)
+    assert not dfs.has_changed(pid3)
+
+
+def test_df_eval_lazy_two_nodes_up_nonlazy():
+    df = DataFlow()
+    vid0 = df.add_vertex()
+    pid0 = df.add_in_port(vid0, "in")
+    pid1 = df.add_out_port(vid0, "out")
+    df.set_actor(vid0, FuncNode({}, {}, int))
+    vid1 = df.add_vertex()
+    pid2 = df.add_in_port(vid1, "in")
+    pid3 = df.add_out_port(vid1, "out")
+    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.connect(pid1, pid2)
+    df.actor(vid0).set_lazy(False)
+
+    algo = LazyEvaluation(df)
+    dfs = DataflowState(df)
+    dfs.set_data(pid0, 1)
+
+    assert not df.actor(vid0).is_lazy()
+    assert df.actor(vid1).is_lazy()
+    assert dfs.has_changed(pid0)
+
+    # first run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    t0 = dfs.task_start_time(vid0)
+    assert t0 is not None
+    t1 = dfs.task_end_time(vid0)
+    assert t1 is not None
+    t2 = dfs.task_start_time(vid1)
+    assert t2 is not None
+    t3 = dfs.task_end_time(vid1)
+    assert t3 is not None
+    assert dfs.get_data(pid1) == dfs.get_data(pid0)
+    assert dfs.get_data(pid3) == dfs.get_data(pid0)
+    assert not dfs.has_changed(pid0)
+    assert dfs.has_changed(pid1)
+    assert dfs.input_has_changed(pid2)
+    assert dfs.has_changed(pid3)
+
+    # second run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    assert dfs.task_start_time(vid0) is not None
+    assert dfs.task_start_time(vid0) > t0
+    assert dfs.task_end_time(vid0) is not None
+    assert dfs.task_end_time(vid0) > t1
+    assert dfs.task_start_time(vid1) is not None
+    assert dfs.task_start_time(vid1) > t2
+    assert dfs.task_end_time(vid1) is not None
+    assert dfs.task_end_time(vid1) > t3
+    assert not dfs.has_changed(pid0)
+    assert dfs.has_changed(pid1)
+    assert dfs.input_has_changed(pid2)
+    assert dfs.has_changed(pid3)
+
+
+def test_df_eval_lazy_two_nodes_down_nonlazy():
+    df = DataFlow()
+    vid0 = df.add_vertex()
+    pid0 = df.add_in_port(vid0, "in")
+    pid1 = df.add_out_port(vid0, "out")
+    df.set_actor(vid0, FuncNode({}, {}, int))
+    vid1 = df.add_vertex()
+    pid2 = df.add_in_port(vid1, "in")
+    pid3 = df.add_out_port(vid1, "out")
+    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.connect(pid1, pid2)
+    df.actor(vid1).set_lazy(False)
+
+    algo = LazyEvaluation(df)
+    dfs = DataflowState(df)
+    dfs.set_data(pid0, 1)
+
+    assert df.actor(vid0).is_lazy()
+    assert not df.actor(vid1).is_lazy()
+    assert dfs.has_changed(pid0)
+
+    # first run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    t0 = dfs.task_start_time(vid0)
+    assert t0 is not None
+    t1 = dfs.task_end_time(vid0)
+    assert t1 is not None
+    t2 = dfs.task_start_time(vid1)
+    assert t2 is not None
+    t3 = dfs.task_end_time(vid1)
+    assert t3 is not None
+    assert dfs.get_data(pid1) == dfs.get_data(pid0)
+    assert dfs.get_data(pid3) == dfs.get_data(pid0)
+    assert not dfs.has_changed(pid0)
+    assert dfs.has_changed(pid1)
+    assert dfs.input_has_changed(pid2)
+    assert dfs.has_changed(pid3)
+
+    # second run
+    algo.clear()
+    algo.eval(None, dfs)
+
+    assert dfs.is_valid()
+
+    assert dfs.task_start_time(vid0) is None
+    assert dfs.task_end_time(vid0) is None
+    assert dfs.task_start_time(vid1) is not None
+    assert dfs.task_start_time(vid1) > t2
+    assert dfs.task_end_time(vid1) is not None
+    assert dfs.task_end_time(vid1) > t3
+    assert not dfs.has_changed(pid0)
+    assert not dfs.has_changed(pid1)
+    assert not dfs.input_has_changed(pid2)
+    assert dfs.has_changed(pid3)

@@ -3,8 +3,8 @@ import operator
 
 from openalea.core.dataflow import DataFlow
 from openalea.core.dataflow_state import DataflowState
-from openalea.core.dataflow_evaluation import (AbstractEvaluation,
-                                               BruteEvaluation)
+from openalea.core.dataflow_evaluation import (BruteEvaluation,
+                                               LazyEvaluation)
 from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
 from openalea.core.node import Node, FuncNode
 
@@ -69,6 +69,7 @@ def test_df_eval_with_prov_single_run():
 
     env = EvaluationEnvironment()
     env.set_provenance(df)
+    env.new_execution()
     dfs = DataflowState(df)
     dfs.set_data(pid_in, 1)
 
@@ -82,10 +83,9 @@ def test_df_eval_with_prov_single_run():
     assert dict(dfs.items()) == dict(state.items())
 
     # test task recording
-    eid = env.current_execution()
+    state = prov.get_state(env.current_execution())
     for vid in df.vertices():
-        t_start, t_end = prov.get_task(eid, vid)
-        assert t_end > t_start
+        assert state.task_end_time(vid) > state.task_start_time(vid)
 
 
 def test_df_eval_with_prov_multiple_runs():
@@ -119,12 +119,51 @@ def test_df_eval_with_prov_multiple_runs():
 
     # test task recording
     for eid in eids:
+        state = prov.get_state(eid)
         for vid in df.vertices():
-            t_start, t_end = prov.get_task(eid, vid)
-            assert t_end > t_start
+            assert state.task_end_time(vid) > state.task_start_time(vid)
 
     for vid in df.vertices():
-        t_starts = tuple(prov.get_task(eid, vid)[0] for eid in eids)
-        t_ends = tuple(prov.get_task(eid, vid)[0] for eid in eids)
-        assert t_starts == tuple(sorted(t_starts))
+        t_sts = tuple(prov.get_state(eid).task_start_time(vid) for eid in eids)
+        t_ends = tuple(prov.get_state(eid).task_end_time(vid) for eid in eids)
+        assert t_sts == tuple(sorted(t_sts))
         assert t_ends == tuple(sorted(t_ends))
+
+
+def test_df_eval_lazy_with_prov():
+    df = DataFlow()
+    vid0 = df.add_vertex()
+    pid0 = df.add_in_port(vid0, "in")
+    pid1 = df.add_out_port(vid0, "out")
+    df.set_actor(vid0, FuncNode({}, {}, int))
+    vid1 = df.add_vertex()
+    pid2 = df.add_in_port(vid1, "in")
+    pid3 = df.add_out_port(vid1, "out")
+    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.connect(pid1, pid2)
+    df.actor(vid1).set_lazy(False)
+
+    algo = LazyEvaluation(df)
+    dfs = DataflowState(df)
+    dfs.set_data(pid0, 1)
+
+    env = EvaluationEnvironment()
+    env.set_provenance(df)
+    prov = env.provenance()
+
+    eids = []
+    peid = None
+    for i in range(3):
+        env.new_execution(peid)
+        eids.append(env.current_execution())
+        peid = env.current_execution()
+        assert env.current_execution() not in prov
+
+        algo.clear()
+        algo.eval(env, dfs)
+
+        assert env.current_execution() in prov
+
+    last_eid = eids[-1]
+    assert prov.last_evaluation(vid0) == eids[0]
+    assert prov.last_evaluation(vid1) == last_eid

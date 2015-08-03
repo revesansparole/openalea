@@ -1,4 +1,5 @@
 from nose.tools import assert_raises
+from time import sleep
 
 from openalea.core.dataflow import DataFlow
 from openalea.core.dataflow_state import DataflowState
@@ -38,8 +39,10 @@ def test_dataflow_state_init():
     dfs = DataflowState(df)
     dfs.clear()
 
-    assert len(dfs._state) == 0
+    assert len(tuple(dfs.items())) == 0
     assert id(dfs.dataflow()) == id(df)
+    d = dict(dfs.tasks())
+    assert set(d) == set(vids)
 
 
 def test_dataflow_state_reinit():
@@ -57,6 +60,25 @@ def test_dataflow_state_reinit():
     assert dfs.is_ready_for_evaluation()
     for pid in (pid11, pid21, pid33):
         assert_raises(KeyError, lambda: dfs.get_data(pid))
+
+
+def test_dataflow_state_reinit_with_changed():
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
+
+    dfs = DataflowState(df)
+
+    dfs.set_data(pid10, 0)
+    dfs.set_changed(pid10, False)
+
+    for i, pid in enumerate([pid11, pid21, pid33]):
+        dfs.set_data(pid, i)
+
+    dfs.reinit()
+    for pid in (pid11, pid21, pid33):
+        assert_raises(KeyError, lambda: dfs.has_changed(pid))
+
+    assert not dfs.has_changed(pid10)
 
 
 def test_dataflow_state_is_ready_for_evaluation():
@@ -154,29 +176,6 @@ def test_dataflow_state_get_data():
     assert tuple(dfs.get_data(pid32)) == (3, 1)
 
 
-def test_dataflow_state_update():
-    df, vids, pids = get_dataflow()
-    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
-    dfs = DataflowState(df)
-
-    d = dict((pid, i) for i, pid in enumerate([pid11, pid21, pid33, pid51]))
-    dfs.update(d)
-
-    assert_raises(KeyError, lambda: dfs.get_data(pid10))
-    assert not dfs.is_valid()
-    for i, pid in enumerate([pid11, pid21, pid33, pid51]):
-        assert dfs.get_data(pid) == i
-
-    d = {pid10: 'a'}
-    dfs.update(d)
-
-    assert dfs.is_valid()
-    for i, pid in enumerate([pid11, pid21, pid33, pid51]):
-        assert dfs.get_data(pid) == i
-
-    assert dfs.get_data(pid10) == 'a'
-
-
 def test_dataflow_state_changed():
     df, vids, pids = get_dataflow()
     pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
@@ -185,12 +184,70 @@ def test_dataflow_state_changed():
     dfs.set_data(pid10, 'a')
     assert dfs.has_changed(pid10)
     assert_raises(KeyError, lambda: dfs.has_changed(pid11))
+    assert_raises(KeyError, lambda: dfs.set_changed(pid31, False))
     assert_raises(KeyError, lambda: dfs.set_changed(pid51, False))
 
-    for pid in pids[1:]:
+    for pid in (pid11, pid21, pid33, pid51):
         dfs.set_data(pid, pid)
         assert dfs.has_changed(pid)
 
     dfs.set_changed(pid21, False)
     assert not dfs.has_changed(pid21)
     assert dfs.has_changed(pid10)
+
+
+def test_dataflow_state_input_has_changed():
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
+    dfs = DataflowState(df)
+
+    dfs.set_data(pid10, 'a')
+
+    for pid in (pid11, pid21, pid33, pid51):
+        dfs.set_data(pid, pid)
+
+    dfs.set_changed(pid21, False)
+
+    assert_raises(KeyError, lambda: dfs.input_has_changed(pid21))
+    assert dfs.input_has_changed(pid10)
+    assert dfs.input_has_changed(pid31)
+    assert dfs.input_has_changed(pid32)
+    assert dfs.input_has_changed(pid41)
+
+    dfs.set_changed(pid11, False)
+    assert not dfs.input_has_changed(pid31)
+
+    dfs.set_changed(pid10, False)
+    assert not dfs.input_has_changed(pid10)
+
+    dfs.set_changed(pid51, False)
+    assert not dfs.input_has_changed(pid32)
+
+
+def test_dataflow_state_start_task():
+    df, vids, pids = get_dataflow()
+    vid1, vid2, vid3, vid4, vid5 = vids
+    dfs = DataflowState(df)
+
+    assert dfs.task_start_time(vid1) is None
+    assert dfs.task_end_time(vid1) is None
+
+    dfs.task_started(vid1)
+    sleep(0.01)
+    dfs.task_ended(vid1)
+
+    dfs.set_task_start_time(vid2, 1)
+    dfs.set_task_end_time(vid2, 2)
+
+    t0 = dfs.task_start_time(vid1)
+    t1 = dfs.task_end_time(vid1)
+    assert t1 > t0
+
+    assert dfs.task_start_time(vid2) == 1
+    assert dfs.task_end_time(vid2) == 2
+
+    dfs.reinit()
+    for vid in vids :
+        assert dfs.task_start_time(vid) is None
+        assert dfs.task_end_time(vid) is None
+
