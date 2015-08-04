@@ -148,15 +148,6 @@ class AbstractNode(Observed, HasAdHoc):
     raise_exception = property(get_raise_exception, set_raise_exception)
 
 
-class Annotation(AbstractNode):
-    def __init__(self):
-        AbstractNode.__init__(self)
-
-    def to_script (self):
-        """Script translation of this node.
-        """
-        return ""
-
 class Node(AbstractNode):
     """
     It is a callable object with typed inputs and outputs.
@@ -724,12 +715,6 @@ def initialise_standard_metadata():
     AbstractNode.extend_ad_hoc_slots("position", list, [0, 0], "posx", "posy")
     Node.extend_ad_hoc_slots("userColor", list, None, "user_color")
     Node.extend_ad_hoc_slots("useUserColor", bool, True, "use_user_color",)
-    Annotation.extend_ad_hoc_slots("text", str, "", "txt")
-#    Annotation.extend_ad_hoc_slots("htmlText", str, None)
-    Annotation.extend_ad_hoc_slots("textColor", list, None)
-    Annotation.extend_ad_hoc_slots("rectP2", tuple, (-1, -1))
-    Annotation.extend_ad_hoc_slots("color", list, None)
-    Annotation.extend_ad_hoc_slots("visualStyle", int, None)
 
 
 initialise_standard_metadata()
