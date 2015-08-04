@@ -125,8 +125,8 @@ def test_dataflow_evaluation_eval_no_vid2():
 def test_dataflow_evaluation_single_input_single_output():
     df = DataFlow()
     vid = df.add_vertex()
-    pid0 = df.add_in_port(vid, "in")
-    pid1 = df.add_in_port(vid, "in")
+    pid0 = df.add_in_port(vid, "in1")
+    pid1 = df.add_in_port(vid, "in2")
     pid2 = df.add_out_port(vid, "out")
 
     df.set_actor(vid, FuncNode({}, {}, operator.add))

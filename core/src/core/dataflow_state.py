@@ -108,14 +108,12 @@ class DataflowState(object):
         then use pids"""
         df = self._dataflow
 
-        try:
-            node1 = df.actor(df.vertex(pid1))
-        except KeyError:
+        node1 = df.actor(df.vertex(pid1))
+        if node1 is None:
             return cmp(pid1, pid2)
 
-        try:
-            node2 = df.actor(df.vertex(pid2))
-        except KeyError:
+        node2 = df.actor(df.vertex(pid2))
+        if node2 is None:
             return cmp(pid1, pid2)
 
         p1 = node1.get_ad_hoc_dict().get_metadata('position')[0]
