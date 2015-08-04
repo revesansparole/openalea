@@ -16,7 +16,7 @@ class DummyActor(IActor):
     def set_id(self, vid):
         """ GRUUIKK needed for dataflow ?????
         """
-        pass
+        print vid
 
     def inputs(self):
         for i in range(4):
@@ -24,59 +24,7 @@ class DummyActor(IActor):
 
     def outputs(self):
         for i in range(3):
-            yield "out%d" %i, None
-
-
-def test_dataflow():
-    """ test dataflow"""
-    df=DataFlow()
-    vid1=df.add_vertex()
-    pid11=df.add_out_port(vid1, "out")
-    vid2=df.add_vertex()
-    pid21=df.add_out_port(vid2, "out")
-
-    vid3=df.add_vertex()
-    pid31=df.add_in_port(vid3, "in1")
-    pid32=df.add_in_port(vid3, "in2")
-    pid33=df.add_out_port(vid3, "res")
-
-    vid4=df.add_vertex()
-    pid41=df.add_in_port(vid4, "in")
-
-    eid1=df.connect(pid11, pid31)
-    eid2=df.connect(pid21, pid32)
-    eid3=df.connect(pid33, pid41)
-
-    assert df.source_port(eid1)==pid11
-    assert df.target_port(eid2)==pid32
-    assert set(df.out_ports(vid1))==set((pid11, ))
-    assert set(df.in_ports(vid3))==set((pid31, pid32))
-    assert set(df.ports(vid3))==set((pid31, pid32, pid33))
-    assert df.is_in_port(pid31)
-    assert df.is_out_port(pid11)
-    assert df.vertex(pid11)==vid1
-    assert set(df.connected_ports(pid11))==set((pid31, ))
-    assert set(df.connected_edges(pid21))==set((eid2, ))
-    assert df.out_port(vid1, "out")==pid11
-    assert df.in_port(vid3, "in1")==pid31
-
-    test=False
-    try:
-        dummy=df.connect(pid11, pid33)
-    except PortError:
-        test=True
-    assert test
-
-
-    df.remove_port(pid33)
-    assert set(df.connected_ports(pid41))==set()
-    assert set(df.out_edges(vid3))==set()
-    test=False
-    try:
-        dummy=df.port(pid33)
-    except PortError:
-        test=True
-    assert test
+            yield "out%d" % i, None
 
 
 def test_dataflow_init():
@@ -307,9 +255,9 @@ def test_dataflow_port():
     assert_raises(PortError, lambda: df.port(0))
 
     pid1 = df.add_in_port(vid, 0)
-    assert df.port(pid1)._vid == vid
+    assert df.port(pid1).vid == vid
     pid2 = df.add_out_port(vid, 0)
-    assert df.port(pid2)._vid == vid
+    assert df.port(pid2).vid == vid
 
 
 def test_dataflow_local_id():
@@ -360,6 +308,14 @@ def test_dataflow_actor():
     assert df.actor(vid) is None
 
     actor = DummyActor()
+    assert_raises(PortError, lambda: df.set_actor(vid, actor))
+
+    for key, interface in actor.inputs():
+        df.add_in_port(vid, key)
+
+    for key, interface in actor.outputs():
+        df.add_out_port(vid, key)
+
     df.set_actor(vid, actor)
     assert df.actor(vid) == actor
 
@@ -373,8 +329,17 @@ def test_dataflow_set_actor():
     vid = df.add_vertex()
     df.set_actor(vid, None)
     assert df.actor(vid) is None
+    assert_raises(PortError, lambda: df.set_actor(vid, actor))
+
+    for key, interface in actor.inputs():
+        df.add_in_port(vid, key)
+
+    for key, interface in actor.outputs():
+        df.add_out_port(vid, key)
+
     df.set_actor(vid, actor)
     assert df.actor(vid) == actor
+
     df.set_actor(vid, None)
     assert df.actor(vid) is None
 
@@ -386,6 +351,13 @@ def test_dataflow_add_actor():
 
     assert_raises(InvalidActor, lambda: df.add_actor(None))
     assert_raises(IndexError, lambda: df.add_actor(actor, vid1))
+
+    for key, interface in actor.inputs():
+        df.add_in_port(vid1, key)
+
+    for key, interface in actor.outputs():
+        df.add_out_port(vid1, key)
+
     df.set_actor(vid1, actor)
     assert_raises(IndexError, lambda: df.add_actor(actor, vid1))
 
@@ -478,6 +450,7 @@ def test_dataflow_add_vertex():
     assert len(tuple(df.ports(vid))) == 0
     assert df.actor(vid) is None
 
+
 def test_dataflow_remove_vertex():
     df = DataFlow()
     vid1 = df.add_vertex()
@@ -515,5 +488,51 @@ def test_dataflow_clear():
     assert len(tuple(df.ports())) == 0
 
 
+def test_dataflow_big():
+    df = DataFlow()
+    vid1 = df.add_vertex()
+    pid11 = df.add_out_port(vid1, "out")
+    vid2 = df.add_vertex()
+    pid21 = df.add_out_port(vid2, "out")
 
+    vid3 = df.add_vertex()
+    pid31 = df.add_in_port(vid3, "in1")
+    pid32 = df.add_in_port(vid3, "in2")
+    pid33 = df.add_out_port(vid3, "res")
 
+    vid4 = df.add_vertex()
+    pid41 = df.add_in_port(vid4, "in")
+
+    eid1 = df.connect(pid11, pid31)
+    eid2 = df.connect(pid21, pid32)
+    df.connect(pid33, pid41)
+
+    assert df.source_port(eid1) == pid11
+    assert df.target_port(eid2) == pid32
+    assert set(df.out_ports(vid1)) == {pid11}
+    assert set(df.in_ports(vid3)) == {pid31, pid32}
+    assert set(df.ports(vid3)) == {pid31, pid32, pid33}
+    assert df.is_in_port(pid31)
+    assert df.is_out_port(pid11)
+    assert df.vertex(pid11) == vid1
+    assert set(df.connected_ports(pid11)) == {pid31}
+    assert set(df.connected_edges(pid21)) == {eid2}
+    assert df.out_port(vid1, "out") == pid11
+    assert df.in_port(vid3, "in1") == pid31
+
+    test = False
+    try:
+        df.connect(pid11, pid33)
+    except PortError:
+        test = True
+    assert test
+
+    df.remove_port(pid33)
+    assert set(df.connected_ports(pid41)) == set()
+    assert set(df.out_edges(vid3)) == set()
+    test = False
+    try:
+        df.port(pid33)
+    except PortError:
+        test = True
+    assert test

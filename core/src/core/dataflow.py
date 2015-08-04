@@ -38,12 +38,11 @@ class Port(object):
     simple structure to maintain some port property
     a port is an entry point to a vertex
     """
-
     def __init__(self, vid, local_pid, is_out_port):
         # internal data to access from dataflow
-        self._vid = vid
-        self._local_pid = local_pid
-        self._is_out_port = is_out_port
+        self.vid = vid
+        self.local_pid = local_pid
+        self.is_out_port = is_out_port
 
 
 class DataFlow(PropertyGraph):
@@ -178,7 +177,7 @@ class DataFlow(PropertyGraph):
             - (bool)
         """
         try:
-            return not self._ports[pid]._is_out_port
+            return not self._ports[pid].is_out_port
         except KeyError:
             raise PortError("port %d does not exist" % pid)
 
@@ -192,7 +191,7 @@ class DataFlow(PropertyGraph):
             - (bool)
         """
         try:
-            return self._ports[pid]._is_out_port
+            return self._ports[pid].is_out_port
         except KeyError:
             raise PortError("port %d does not exist" % pid)
 
@@ -206,7 +205,7 @@ class DataFlow(PropertyGraph):
             - (vid)
         """
         try:
-            return self._ports[pid]._vid
+            return self._ports[pid].vid
         except KeyError:
             raise PortError("port %d does not exist" % pid)
 
@@ -286,7 +285,7 @@ class DataFlow(PropertyGraph):
             - (local pid)
         """
         try:
-            return self._ports[pid]._local_pid
+            return self._ports[pid].local_pid
         except KeyError:
             raise PortError("port %s does not exist" % str(pid))
 
@@ -301,7 +300,7 @@ class DataFlow(PropertyGraph):
             - (pid)
         """
         for pid in self.in_ports(vid):
-            if self._ports[pid]._local_pid == local_pid:
+            if self._ports[pid].local_pid == local_pid:
                 return pid
 
         msg = "local pid '%s' does not exist for vertex %d" % (local_pid, vid)
@@ -318,7 +317,7 @@ class DataFlow(PropertyGraph):
             - (pid)
         """
         for pid in self.out_ports(vid):
-            if self._ports[pid]._local_pid == local_pid:
+            if self._ports[pid].local_pid == local_pid:
                 return pid
 
         msg = "local pid '%s' does not exist for vertex %d" % (local_pid, vid)
@@ -352,11 +351,16 @@ class DataFlow(PropertyGraph):
             raise InvalidVertex("vertex %d does not exist" % vid)
 
         if actor is not None:
-            try:  # TODO: hack to remove
-                  # TODO: check that actor inputs and outputs correspond to vertex inputs and outputs
-                actor.set_id(vid)  # TODO: GRUUIIIKK to remove
-            except Exception, e:
-                print e
+            # test actor inputs vs vertex in ports
+            for key, interface in actor.inputs():
+                assert self.in_port(vid, key)
+
+            # test actor outputs vs vertex out ports
+            for key, interface in actor.outputs():
+                assert self.out_port(vid, key)
+
+            # set actor
+            actor.set_id(vid)  # TODO: GRUUIIIKK to remove
 
         self.vertex_property("_actor")[vid] = actor
 
@@ -377,7 +381,7 @@ class DataFlow(PropertyGraph):
         vid = self.add_vertex(vid)
 
         try:
-            for key, interface in actor.inputs():  # TODO: update IActor to reflect Node definition
+            for key, interface in actor.inputs():
                 self.add_in_port(vid, key)
 
             for key, interface in actor.outputs():
@@ -506,10 +510,8 @@ class DataFlow(PropertyGraph):
 
     def remove_vertex(self, vid):
         for pid in list(self.ports(vid)):
-            try:  # TODO: hack
-                self.remove_port(pid)
-            except:
-                pass
+            self.remove_port(pid)
+
         PropertyGraph.remove_vertex(self, vid)
 
     remove_vertex.__doc__ = PropertyGraph.remove_vertex.__doc__
@@ -549,34 +551,34 @@ class DataFlow(PropertyGraph):
     #                     scan_list.append(nvid)
 
 
-# class SubDataflow(object):
-#     """ Represents a part of a dataflow for a partial evaluation
-#     A SubDataflow is a callable and absracts a part of a dataflow as a funtion
-#     """
-#
-#     def __init__(self, dataflow, algo, node_id, port_index):
-#         """ Constructor
-#
-#         :param dataflow: todo
-#         :param algo: algorithm for evaluation.
-#         :param node_id: todo
-#         :param port_index: output port index in node_id
-#         """
-#
-#         self.dataflow = dataflow
-#         self.algo = algo
-#         self.node_id = node_id
-#         self.port_index = port_index
-#
-#     def __call__(self, *args):
-#         """ Consider the Subdataflow as a function """
-#
-#         if (not self.dataflow):
-#             return args[0]
-#             # Identity function
-#             # if(len(args)==1): return args[0]
-#             # else: return args
-#
-#         self.algo.eval(self.node_id, list(args), is_subdataflow=True)
-#         ret = self.dataflow.actor(self.node_id).get_output(self.port_index)
-#         return ret
+class SubDataflow(object):
+    """ Represents a part of a dataflow for a partial evaluation
+    A SubDataflow is a callable and absracts a part of a dataflow as a funtion
+    """
+
+    def __init__(self, dataflow, algo, node_id, port_index):
+        """ Constructor
+
+        :param dataflow: todo
+        :param algo: algorithm for evaluation.
+        :param node_id: todo
+        :param port_index: output port index in node_id
+        """
+
+        self.dataflow = dataflow
+        self.algo = algo
+        self.node_id = node_id
+        self.port_index = port_index
+
+    def __call__(self, *args):
+        """ Consider the Subdataflow as a function """
+
+        if (not self.dataflow):
+            return args[0]
+            # Identity function
+            # if(len(args)==1): return args[0]
+            # else: return args
+
+        self.algo.eval(self.node_id, list(args), is_subdataflow=True)
+        ret = self.dataflow.actor(self.node_id).get_output(self.port_index)
+        return ret
