@@ -27,8 +27,9 @@ import string
 import pprint
 import copy
 
-from openalea.core.node import AbstractFactory, AbstractPort, Node
-from openalea.core.node import RecursionError
+from openalea.core.node import RecursionError, Node
+from openalea.core.node_factory import AbstractFactory
+from openalea.core.node_port import AbstractPort
 from openalea.core.pkgmanager import PackageManager, UnknownPackageError
 from openalea.core.package import UnknownNodeError
 from openalea.core.dataflow import DataFlow, InvalidEdge, PortError

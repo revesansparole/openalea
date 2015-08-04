@@ -23,7 +23,8 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-from openalea.core.node import AbstractFactory, Node, NodeFactory
+from openalea.core.node import Node
+from openalea.core.node_factory import AbstractFactory, NodeFactory
 from openalea.core.interface import IData
 from openalea.core.path import path as Path
 

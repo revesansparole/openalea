@@ -4,7 +4,8 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$"
 
 from openalea.core.package import Package, UserPackage
-from openalea.core.node import Factory, Node, NodeFactory, Alias
+from openalea.core.node import Node
+from openalea.core.node_factory import Factory, NodeFactory, Alias
 from openalea.core.data import DataFactory, PackageData
 from openalea.core.compositenode import CompositeNode, CompositeNodeFactory
 from openalea.core.interface import *
