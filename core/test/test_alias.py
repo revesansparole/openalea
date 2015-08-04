@@ -11,7 +11,7 @@ def test_load():
     pkgman = PackageManager()
     pkgman.load_directory("pkg")
     assert pkgman["pkg_test"]
-    assert pkgman["pkg_alias"]==pkgman["pkg_test"]
+    assert pkgman["pkg_alias"] == pkgman["pkg_test"]
 
 
 def test_alias():
@@ -24,5 +24,3 @@ def test_alias():
     assert pkgman["pkg_test"]["file2.txt"] is pkgman["pkg_test"]["g"]
     assert pkgman["pkg_test"]["file1.txt"]
     assert pkgman["pkg_test"]["aliasf1"] is pkgman["pkg_test"]["file1.txt"]
-
-

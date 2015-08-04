@@ -27,6 +27,7 @@ import inspect
 import os
 import sys
 import types
+from weakref import ref
 
 from openalea.core.node import AbstractNode, FuncNode
 from openalea.core.observer import Observed
