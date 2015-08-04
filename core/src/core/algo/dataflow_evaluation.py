@@ -24,7 +24,7 @@ from time import clock
 import traceback as tb
 from openalea.core import ScriptLibrary
 
-from openalea.core.dataflow import SubDataflow
+from openalea.core.subdataflow import SubDataflow
 from openalea.core.interface import IFunction
 
 

@@ -352,12 +352,12 @@ class DataFlow(PropertyGraph):
 
         if actor is not None:
             # test actor inputs vs vertex in ports
-            for key, interface in actor.inputs():
-                assert self.in_port(vid, key)
+            for key, interface in actor.gruuik_inputs():
+                pid = self.in_port(vid, key)
 
             # test actor outputs vs vertex out ports
-            for key, interface in actor.outputs():
-                assert self.out_port(vid, key)
+            for key, interface in actor.gruuik_outputs():
+                pid = self.out_port(vid, key)
 
             # set actor
             actor.set_id(vid)  # TODO: GRUUIIIKK to remove
@@ -381,10 +381,10 @@ class DataFlow(PropertyGraph):
         vid = self.add_vertex(vid)
 
         try:
-            for key, interface in actor.inputs():
+            for key, interface in actor.gruuik_inputs():
                 self.add_in_port(vid, key)
 
-            for key, interface in actor.outputs():
+            for key, interface in actor.gruuik_outputs():
                 self.add_out_port(vid, key)
         except AttributeError:
             raise InvalidActor("actor does not verify IActor interface")
@@ -550,35 +550,3 @@ class DataFlow(PropertyGraph):
     #                 if (not nvid in processed):
     #                     scan_list.append(nvid)
 
-
-class SubDataflow(object):
-    """ Represents a part of a dataflow for a partial evaluation
-    A SubDataflow is a callable and absracts a part of a dataflow as a funtion
-    """
-
-    def __init__(self, dataflow, algo, node_id, port_index):
-        """ Constructor
-
-        :param dataflow: todo
-        :param algo: algorithm for evaluation.
-        :param node_id: todo
-        :param port_index: output port index in node_id
-        """
-
-        self.dataflow = dataflow
-        self.algo = algo
-        self.node_id = node_id
-        self.port_index = port_index
-
-    def __call__(self, *args):
-        """ Consider the Subdataflow as a function """
-
-        if (not self.dataflow):
-            return args[0]
-            # Identity function
-            # if(len(args)==1): return args[0]
-            # else: return args
-
-        self.algo.eval(self.node_id, list(args), is_subdataflow=True)
-        ret = self.dataflow.actor(self.node_id).get_output(self.port_index)
-        return ret
