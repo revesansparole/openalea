@@ -4,7 +4,7 @@
 #
 #       Copyright 2006-2009 INRIA - CIRAD - INRA
 #
-#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
+#       File author(s): Jerome Chopard <revesansparole@gmail.com>
 #                       Fred Theveny <frederic.theveny@cirad.fr>
 #
 #       Distributed under the Cecill-C License.
@@ -25,28 +25,32 @@ from openalea.core.graph.id_generator import IdGenerator
 from collections import deque
 
 
-class PortError (Exception):
+class InvalidActor(Exception):
     pass
 
 
-class Port (object):
+class PortError(Exception):
+    pass
+
+
+class Port(object):
     """
     simple structure to maintain some port property
     a port is an entry point to a vertex
     """
 
     def __init__(self, vid, local_pid, is_out_port):
-        #internal data to access from dataflow
+        # internal data to access from dataflow
         self._vid = vid
         self._local_pid = local_pid
         self._is_out_port = is_out_port
 
 
 class DataFlow(PropertyGraph):
-    """
-    Directed graph with connections between in_ports
-    of vertices and out_port of vertices
-    ports are typed
+    """ Directed graph with connections between in_ports
+    of vertices and out_port of vertices.
+
+    Ports are not typed.
     """
 
     def __init__(self):
@@ -67,24 +71,32 @@ class DataFlow(PropertyGraph):
     ####################################################
 
     def source_port(self, eid):
-        """
-        out port of the source vertex
-        of the edge
+        """ Out port of the source vertex of the edge.
 
-        :param eid: todo
-        :rtype: pid
+        args:
+            - eid (eid): id of edge
+
+        return:
+            - (pid): id of port
         """
-        return self.edge_property("_source_port")[eid]
+        try:
+            return self.edge_property("_source_port")[eid]
+        except KeyError:
+            raise PortError("edge not connected to an input port")
 
     def target_port(self, eid):
-        """
-        in port of the target vertex
-        of the edge
+        """ In port of the target vertex of the edge.
 
-        :param eid: todo
-        :rtype: pid
+        args:
+            - eid (eid): id of edge
+
+        return:
+            - (pid): id of port
         """
-        return self.edge_property("_target_port")[eid]
+        try:
+            return self.edge_property("_target_port")[eid]
+        except KeyError:
+            raise PortError("edge not connected to an output port")
 
     ####################################################
     #
@@ -92,44 +104,63 @@ class DataFlow(PropertyGraph):
     #
     ####################################################
 
-    def out_ports(self, vid=None):
-        """
-        iter on all out ports of a given vertex
-        iter on all out ports of the dataflow
-        if vid is None
+    def ports(self, vid=None):
+        """ Iterates on all ports.
 
-        :param vid: todo
-        :rtype: iter of pid
+        If vid is None, iterates on all ports
+        in the dataflow.
+        Else, iterates only on the ports of
+        the given vertex.
+
+        args:
+            - vid (vid): id of vertex
+
+        return:
+            - (iter of pid)
         """
-        for pid in self.ports(vid):
-            if self.is_out_port(pid):
-                yield pid
+        if vid is None:
+            return iter(self._ports)
+        else:
+            try:
+                return iter(self.vertex_property("_ports")[vid])
+            except KeyError:
+                raise InvalidVertex("vertex %d does not exist" % vid)
 
     def in_ports(self, vid=None):
-        """
-        iter on all in ports of a given vertex
-        iter on all in ports of the dataflow
-        if vid is None
+        """ Iterates on all in ports.
 
-        :rtype: iter of pid
+        If vid is None, iterates on all in ports
+        in the dataflow.
+        Else, iterates only on the in ports of
+        the given vertex.
+
+        args:
+            - vid (vid): id of vertex
+
+        return:
+            - (iter of pid)
         """
         for pid in self.ports(vid):
             if self.is_in_port(pid):
                 yield pid
 
-    def ports(self, vid=None):
-        """
-        iter on all ports of a given vertex
-        iter on all ports of the dataflow
-        if vid is None
+    def out_ports(self, vid=None):
+        """ Iterates on all out ports.
 
-        :rtype: iter of pid
-        """
-        if vid is None:
-            return iter(self._ports)
-        else:
-            return iter(self.vertex_property("_ports")[vid])
+        If vid is None, iterates on all out ports
+        in the dataflow.
+        Else, iterates only on the out ports of
+        the given vertex.
 
+        args:
+            - vid (vid): id of vertex
+
+        return:
+            - (iter of pid)
+        """
+        for pid in self.ports(vid):
+            if self.is_out_port(pid):
+                yield pid
 
     ####################################################
     #
@@ -138,33 +169,74 @@ class DataFlow(PropertyGraph):
     ####################################################
 
     def is_in_port(self, pid):
+        """ Test whether a port is an input for its vertex.
+
+        args:
+            - pid (pid): id of port to consider
+
+        return:
+            - (bool)
         """
-        test whether port refered by pid
-        is an in port of its vertex
-        :rtype: bool
-        """
-        return not self._ports[pid]._is_out_port
+        try:
+            return not self._ports[pid]._is_out_port
+        except KeyError:
+            raise PortError("port %d does not exist" % pid)
 
     def is_out_port(self, pid):
+        """ Test whether a port is an output for its vertex.
+
+        args:
+            - pid (pid): id of port to consider
+
+        return:
+            - (bool)
         """
-        test whether port refered by pid
-        is an out port of its vertex
-        :rtype: bool
-        """
-        return self._ports[pid]._is_out_port
+        try:
+            return self._ports[pid]._is_out_port
+        except KeyError:
+            raise PortError("port %d does not exist" % pid)
 
     def vertex(self, pid):
+        """ Find id of the vertex who own the port.
+
+        args:
+            - pid (pid): id of port to consider
+
+        return:
+            - (vid)
         """
-        return the id of the vertex which own the port
-        :rtype: vid
+        try:
+            return self._ports[pid]._vid
+        except KeyError:
+            raise PortError("port %d does not exist" % pid)
+
+    def connected_edges(self, pid):
+        """ Iterate on all edges connected to this port.
+
+        args:
+            - pid (pid): id of port to consider
+
+        return:
+            - (iter of eid)
         """
-        return self._ports[pid]._vid
+        vid = self.vertex(pid)
+        if self.is_out_port(pid):
+            for eid in self.out_edges(vid):
+                if self.source_port(eid) == pid:
+                    yield eid
+        else:
+            for eid in self.in_edges(vid):
+                if self.target_port(eid) == pid:
+                    yield eid
 
     def connected_ports(self, pid):
-        """
-        iterate on all ports connected
-        to this port
-        :rtype: iter of pid
+        """ Iterate on all ports connected to this port.
+
+        args:
+            - pid (pid): id of port to consider
+
+        return:
+            - (iter of pid)
         """
         if self.is_out_port(pid):
             for eid in self.connected_edges(pid):
@@ -173,22 +245,6 @@ class DataFlow(PropertyGraph):
             for eid in self.connected_edges(pid):
                 yield self.source_port(eid)
 
-    def connected_edges(self, pid):
-        """
-        iterate on all edges connected
-        to this port
-        :rtype: iter of eid
-        """
-        vid = self.vertex(pid)
-        if self.is_out_port(pid):
-            for eid in self.out_edges(vid):
-                if self.source_port(eid)==pid:
-                    yield eid
-        else:
-            for eid in self.in_edges(vid):
-                if self.target_port(eid)==pid:
-                    yield eid
-
     def nb_connections(self, pid):
         """ Compute number of edges connected to a given port.
 
@@ -196,7 +252,7 @@ class DataFlow(PropertyGraph):
             - pid (pid): id of port
 
         return:
-            - int
+            - (int)
         """
         return len(tuple(self.connected_edges(pid)))
 
@@ -207,43 +263,66 @@ class DataFlow(PropertyGraph):
     ####################################################
 
     def port(self, pid):
-        """
-        port object specified by its global pid
+        """ Port object specified by its global pid
+
+        args:
+            - pid (pid): id of port
+
+        return:
+            - (Port)
         """
         try:
             return self._ports[pid]
         except KeyError:
-            raise PortError("port %s don't exist" % str(pid))
+            raise PortError("port %s does not exist" % str(pid))
 
     def local_id(self, pid):
-        """
-        local port identifier of a given port
-        specified by its global pid
+        """ Find local id of a port.
+
+        args:
+            - pid (pid): id of port
+
+        return:
+            - (local pid)
         """
         try:
             return self._ports[pid]._local_pid
         except KeyError:
-            raise PortError("port %s don't exist" % str(pid))
-
-    def out_port(self, vid, local_pid):
-        """
-        global port id of a given port
-        :rtype: pid
-        """
-        for pid in self.out_ports(vid):
-            if self._ports[pid]._local_pid == local_pid:
-                return pid
-        raise PortError("Local pid '%s' does not exist" % str(local_pid))
+            raise PortError("port %s does not exist" % str(pid))
 
     def in_port(self, vid, local_pid):
-        """
-        global port id of a given port
-        :rtype: pid
+        """ Find global port id of a given input port.
+
+        args:
+            - vid (vid): id of vertex who own the port
+            - local_pid (pid): local id of the port
+
+        return:
+            - (pid)
         """
         for pid in self.in_ports(vid):
             if self._ports[pid]._local_pid == local_pid:
                 return pid
-        raise PortError("local pid '%s' does not exist for vertex %d" % (str(local_pid),vid) )
+
+        msg = "local pid '%s' does not exist for vertex %d" % (local_pid, vid)
+        raise PortError(msg)
+
+    def out_port(self, vid, local_pid):
+        """ Find global port id of a given output port.
+
+        args:
+            - vid (vid): id of vertex who own the port
+            - local_pid (pid): local id of the port
+
+        return:
+            - (pid)
+        """
+        for pid in self.out_ports(vid):
+            if self._ports[pid]._local_pid == local_pid:
+                return pid
+
+        msg = "local pid '%s' does not exist for vertex %d" % (local_pid, vid)
+        raise PortError(msg)
 
     #####################################################
     #
@@ -251,34 +330,63 @@ class DataFlow(PropertyGraph):
     #
     #####################################################
 
+    def actor(self, vid):
+        """ Return actor associated to a given vertex.
+
+        return:
+            - (IActor)
+        """
+        try:
+            return self.vertex_property("_actor")[vid]
+        except KeyError:
+            raise InvalidVertex("vertex %s does not exist" % vid)
+
     def set_actor(self, vid, actor):
+        """ Associate an actor to a given vertex.
+
+        args:
+            - vid (vid): id of vertex
+            - actor (IActor): a function like type of object
         """
-        associate an actor to a given vertex
-        """
-        try : actor.set_id(vid)
-        except Exception, e: print e
+        if vid not in self:
+            raise InvalidVertex("vertex %d does not exist" % vid)
+
+        if actor is not None:
+            try:  # TODO: hack to remove
+                  # TODO: check that actor inputs and outputs correspond to vertex inputs and outputs
+                actor.set_id(vid)  # TODO: GRUUIIIKK to remove
+            except Exception, e:
+                print e
+
         self.vertex_property("_actor")[vid] = actor
 
-    def actor(self, vid):
-        """
-        return actor associated to a given vertex
-        """
-        return self.vertex_property("_actor")[vid]
-
+    # TODO: one day update this function to accept already existing
+    # vertices with no actor and create only relevant ports
     def add_actor(self, actor, vid=None):
-        """
-        create a vertex and the corresponding ports
-        and associate it with the given actor
-        return: vid
+        """ Create a vertex and the corresponding ports
+        and associate it with the given actor.
+
+        args:
+            - actor (IActor): a function like type of object
+            - vid (vid): id of vertex to use. If None one will
+                         be created.
+
+        return:
+            - vid (vid): id of the vertex that was created
         """
         vid = self.add_vertex(vid)
-        for key, interface in actor.inputs():
-            self.add_in_port(vid, key)
 
-        for key, interface in actor.outputs():
-            self.add_out_port(vid, key)
+        try:
+            for key, interface in actor.inputs():  # TODO: update IActor to reflect Node definition
+                self.add_in_port(vid, key)
+
+            for key, interface in actor.outputs():
+                self.add_out_port(vid, key)
+        except AttributeError:
+            raise InvalidActor("actor does not verify IActor interface")
 
         self.set_actor(vid, actor)
+
         return vid
 
     #####################################################
@@ -288,83 +396,117 @@ class DataFlow(PropertyGraph):
     #####################################################
 
     def add_in_port(self, vid, local_pid, pid=None):
-        """
-        add a new in port to vertex pid using local_pid
-        use pid as global port id if specified or
-        create a new one if None
-        raise an error if pid is already used
+        """ Add a new input port to a vertex.
 
-        :returns: pid used
-        :rtype: pid
+        args:
+            - vid (vid): id of vertex who will own the port.
+            - local_pid (pid): local identifier for the port.
+            - pdi (pid): global pid for the port. If None
+                         a new one will be created
+
+        return:
+            - pid (pid): global id of the created port.
         """
+        if vid not in self:
+            raise InvalidVertex("vertex %d does not exists" % vid)
+
+        for tpid in self.in_ports(vid):
+            if self.local_id(tpid) == local_pid:
+                msg = "port %s already exists for this vertex" % local_pid
+                raise PortError(msg)
+
         pid = self._pid_generator.get_id(pid)
+
         self._ports[pid] = Port(vid, local_pid, False)
         self.vertex_property("_ports")[vid].add(pid)
+
         return pid
 
     def add_out_port(self, vid, local_pid, pid=None):
-        """
-        add a new out port to vertex pid using local_pid
-        use pid as global port id if specified or
-        create a new one if None
-        raise an error if pid is already used
+        """ Add a new output port to a vertex.
 
-        :returns: pid used
-        :rtype: pid
+        args:
+            - vid (vid): id of vertex who will own the port.
+            - local_pid (pid): local identifier for the port.
+            - pdi (pid): global pid for the port. If None
+                         a new one will be created
+
+        return:
+            - pid (pid): global id of the created port.
         """
+        if vid not in self:
+            raise InvalidVertex("vertex %d does not exists" % vid)
+
+        for tpid in self.out_ports(vid):
+            if self.local_id(tpid) == local_pid:
+                msg = "port %s already exists for this vertex" % local_pid
+                raise PortError(msg)
+
         pid = self._pid_generator.get_id(pid)
+
         self._ports[pid] = Port(vid, local_pid, True)
         self.vertex_property("_ports")[vid].add(pid)
+
         return pid
 
     def remove_port(self, pid):
-        """
-        remove the specified port
-        and all connections to this port
+        """ Remove a port and all connections
+        attached to this port.
+
+        args:
+            - pid (pid): global id of port to remove
         """
         for eid in list(self.connected_edges(pid)):
             self.remove_edge(eid)
+
         self.vertex_property("_ports")[self.vertex(pid)].remove(pid)
         self._pid_generator.release_id(pid)
+
         del self._ports[pid]
 
+    # TODO: add tests to prevent connections on same vertex
+    # TODO: add tests to prevent duplicating connection
     def connect(self, source_pid, target_pid, eid=None):
-        """
-        connect the out port source_pid with
-        the in_port target_pid
-        use eid if not None or create a new one
-        raise an error if eid is already used
+        """ Connect two ports together.
 
-        :returns: eid used
-        :rtype: eid
+        Connection can only be created between and output port
+        and an input port.
+
+        args:
+            - source_pid (pid): global id of output port.
+            - target_pid (pid): global if of input port.
+            - eid (eid): edge id to use. If None, a new one
+                        will be assigned.
+
+        return:
+            - eid (eid): id of edge used to make the connection.
         """
         if not self.is_out_port(source_pid):
-            raise PortError("source_pid %s is not an output port" % \
-                str(source_pid))
+            msg = "source_pid %s is not an output port" % str(source_pid)
+            raise PortError(msg)
 
         if not self.is_in_port(target_pid):
-            raise PortError("target_pid %s is not an input port" % \
-                str(target_pid))
+            msg = "target_pid %s is not an input port" % str(target_pid)
+            raise PortError(msg)
 
-        eid = self.add_edge((self.vertex(source_pid), \
-            self.vertex(target_pid)), eid)
+        eid = self.add_edge((self.vertex(source_pid), self.vertex(target_pid)),
+                            eid)
         self.edge_property("_source_port")[eid] = source_pid
         self.edge_property("_target_port")[eid] = target_pid
 
         return eid
 
     def add_vertex(self, vid=None):
-        """todo"""
         vid = PropertyGraph.add_vertex(self, vid)
         self.vertex_property("_ports")[vid] = set()
+        self.set_actor(vid, None)
         return vid
 
     add_vertex.__doc__ = PropertyGraph.add_vertex.__doc__
 
     def remove_vertex(self, vid):
-        """todo"""
         for pid in list(self.ports(vid)):
-            try:
+            try:  # TODO: hack
                 self.remove_port(pid)
             except:
                 pass
@@ -373,71 +515,68 @@ class DataFlow(PropertyGraph):
     remove_vertex.__doc__ = PropertyGraph.remove_vertex.__doc__
 
     def clear(self):
-        """todo"""
         self._ports.clear()
         self._pid_generator = IdGenerator()
         PropertyGraph.clear(self)
 
     clear.__doc__ = PropertyGraph.clear.__doc__
 
-    def get_all_parent_nodes(self, vid):
-        """ Return an iterator of vextex id corresponding to all the
-        parent node of vid"""
-
-        input_vid = vid
-        scan_list = deque([vid])
-        processed = set()
-
-        while(scan_list):
-
-            vid = scan_list.popleft()
-            #process_list.appendleft(vid)
-            if(input_vid != vid):
-                yield vid
-
-            processed.add(vid)
-            actor = self.actor(vid)
-
-            # For each inputs
-            for pid in self.in_ports(vid):
-                # For each connected node
-                for npid in self.connected_ports(pid):
-                    nvid = self.vertex(npid)
-
-                    if(not nvid in processed):
-                        scan_list.append(nvid)
-
-
-class SubDataflow(object):
-    """ Represents a part of a dataflow for a partial evaluation
-    A SubDataflow is a callable and absracts a part of a dataflow as a funtion
-    """
-
-    def __init__(self, dataflow, algo, node_id, port_index):
-        """ Constructor
-
-        :param dataflow: todo
-        :param algo: algorithm for evaluation.
-        :param node_id: todo
-        :param port_index: output port index in node_id
-        """
-
-        self.dataflow = dataflow
-        self.algo = algo
-        self.node_id = node_id
-        self.port_index = port_index
-
-    def __call__(self, *args):
-        """ Consider the Subdataflow as a function """
-
-        if(not self.dataflow):
-            return args[0]
-            # Identity function
-            #if(len(args)==1): return args[0]
-            #else: return args
-
-        self.algo.eval(self.node_id, list(args),is_subdataflow=True )
-        ret = self.dataflow.actor(self.node_id).get_output(self.port_index)
-        return ret
+    # def get_all_parent_nodes(self, vid):  # TODO: usefull??
+    #     """ Return an iterator of vextex id corresponding to all the
+    #     parent node of vid"""
+    #
+    #     input_vid = vid
+    #     scan_list = deque([vid])
+    #     processed = set()
+    #
+    #     while (scan_list):
+    #
+    #         vid = scan_list.popleft()
+    #         # process_list.appendleft(vid)
+    #         if (input_vid != vid):
+    #             yield vid
+    #
+    #         processed.add(vid)
+    #         actor = self.actor(vid)
+    #
+    #         # For each inputs
+    #         for pid in self.in_ports(vid):
+    #             # For each connected node
+    #             for npid in self.connected_ports(pid):
+    #                 nvid = self.vertex(npid)
+    #
+    #                 if (not nvid in processed):
+    #                     scan_list.append(nvid)
 
 
+# class SubDataflow(object):
+#     """ Represents a part of a dataflow for a partial evaluation
+#     A SubDataflow is a callable and absracts a part of a dataflow as a funtion
+#     """
+#
+#     def __init__(self, dataflow, algo, node_id, port_index):
+#         """ Constructor
+#
+#         :param dataflow: todo
+#         :param algo: algorithm for evaluation.
+#         :param node_id: todo
+#         :param port_index: output port index in node_id
+#         """
+#
+#         self.dataflow = dataflow
+#         self.algo = algo
+#         self.node_id = node_id
+#         self.port_index = port_index
+#
+#     def __call__(self, *args):
+#         """ Consider the Subdataflow as a function """
+#
+#         if (not self.dataflow):
+#             return args[0]
+#             # Identity function
+#             # if(len(args)==1): return args[0]
+#             # else: return args
+#
+#         self.algo.eval(self.node_id, list(args), is_subdataflow=True)
+#         ret = self.dataflow.actor(self.node_id).get_output(self.port_index)
+#         return ret
