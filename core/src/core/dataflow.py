@@ -24,6 +24,8 @@ from openalea.core.graph.property_graph import InvalidEdge
 from openalea.core.graph.id_generator import IdGenerator
 from collections import deque
 
+from openalea.core.node import Node  # TODO hack
+from openalea.core.subdataflow import SubDataflow  # TODO hack
 
 class InvalidActor(Exception):
     pass
@@ -351,13 +353,14 @@ class DataFlow(PropertyGraph):
             raise InvalidVertex("vertex %d does not exist" % vid)
 
         if actor is not None:
-            # test actor inputs vs vertex in ports
-            for key, interface in actor.inputs():
-                pid = self.in_port(vid, key)
+            if not isinstance(actor, Node):  # TODO: hack
+                # test actor inputs vs vertex in ports
+                for key, interface in actor.inputs():
+                    pid = self.in_port(vid, key)
 
-            # test actor outputs vs vertex out ports
-            for key, interface in actor.outputs():
-                pid = self.out_port(vid, key)
+                # test actor outputs vs vertex out ports
+                for key, interface in actor.outputs():
+                    pid = self.out_port(vid, key)
 
             # set actor
             actor.set_id(vid)  # TODO: GRUUIIIKK to remove
