@@ -62,7 +62,7 @@ class PortOperators(Base):
         (result, ok) = qt.QtGui.QInputDialog.getText(widget, "Data Pool", "Instance name",
                                                   qt.QtGui.QLineEdit.Normal, )
         if(ok):
-            from openalea.core.session import DataPool
+            from openalea.visualea.session import DataPool
             datapool = DataPool()  # Singleton
 
             port = portItem.port()

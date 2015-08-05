@@ -26,7 +26,7 @@ import sys
 from openalea.vpltk import qt
 from openalea.core import logger
 from openalea.visualea.mainwindow import MainWindow
-from openalea.core.session import Session
+from openalea.visualea.session import Session
 
 MULTITHREAD = False
 

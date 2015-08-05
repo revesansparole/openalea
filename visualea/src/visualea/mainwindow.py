@@ -30,7 +30,7 @@ except ImportError:
 
 
 from openalea.core.algo.dataflow_evaluation import AbstractEvaluation
-from openalea.core import cli, logger
+from openalea.core import logger
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.settings import Settings,NoSectionError,NoOptionError
 from openalea.core.node_factory import NodeFactory
@@ -42,6 +42,7 @@ from openalea.visualea.node_treeview import SearchListView, SearchModel
 from openalea.visualea.node_widget import SignalSlotListener
 import metainfo
 
+from openalea.visualea import cli
 from openalea.visualea import helpwidget
 from openalea import misc
 from os.path import join as pj

@@ -34,8 +34,8 @@ from openalea.core.package import Package, UserPackage
 from openalea.core.compositenode import CompositeNodeFactory
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.pkgmanager import PseudoGroup, PseudoPackage
-from openalea.core import cli
 
+from openalea.visualea import cli
 from openalea.visualea.dialogs import EditPackage, NewGraph, NewPackage, NewData
 from openalea.visualea.util import open_dialog, exception_display, busy_cursor
 from openalea.visualea.node_widget import SignalSlotListener
