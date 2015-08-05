@@ -644,11 +644,3 @@ $NAME = Factory(name=$PNAME,
                                       WIDGETMODULE=repr(f.widgetmodule_name),
                                       WIDGETCLASS=repr(f.widgetclass_name),)
         return result
-
-# Utility functions
-def gen_port_list(size):
-    """ Generate a list of port description """
-    mylist = []
-    for i in range(size):
-        mylist.append(dict(name='t' + str(i), interface=None, value=i))
-    return mylist

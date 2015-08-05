@@ -4,7 +4,15 @@ __revision__ = " $Id$ "
 import os, shutil
 
 from openalea.core.package import *
-from openalea.core.node import gen_port_list
+
+
+# Utility functions
+def gen_port_list(size):
+    """ Generate a list of port description """
+    mylist = []
+    for i in range(size):
+        mylist.append(dict(name='t' + str(i), interface=None, value=i))
+    return mylist
 
 
 def test_package():

@@ -24,26 +24,26 @@ Nodes on demand for the dataflow.
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-import imp
+# import imp
 # import inspect
-import os
-import sys
+# import os
+# import sys
 # import string
 # import types
-from copy import copy#, deepcopy
-from weakref import ref, proxy
+from copy import copy  # , deepcopy
+from weakref import ref, proxy  # TODO: GRUUIK to remove
 
 # from signature import get_parameters
 # import signature as sgn
-from observer import Observed#, AbstractListener
+from observer import Observed  # , AbstractListener
 # from actor import IActor
-from metadatadict import HasAdHoc#, MetaDataDict
+from metadatadict import HasAdHoc  # , MetaDataDict
 # from interface import TypeNameInterfaceMap
 from openalea.core.node_port import InputPort, OutputPort
 
 
 # Exceptions
-class RecursionError (Exception):
+class RecursionError(Exception):
     """todo"""
     pass
 
@@ -79,12 +79,12 @@ class AbstractNode(Observed, HasAdHoc):
         HasAdHoc.__init__(self)
         Observed.__init__(self)
 
-        self.__id = None
+        self.__id = None  # TODO: GRUUIK
         # Internal Data (caption...)
         self.internal_data = {}
-        self.factory = None
+        self.factory = None  # TODO: change to self._factory
 
-        # -- the ugly back reference --
+        # -- the ugly back reference -- # TODO: remove this
         # !! Christophe, don't look at this one.
         # proxy to higher level structure, aka CompositeNode.
         # This is currently only used by the "wrap_method" node
@@ -94,64 +94,83 @@ class AbstractNode(Observed, HasAdHoc):
         # The default layout
         self.view = None
         self.user_application = None
-        self.__inError = False
+        self.__inError = False  # TODO: GRUUIK
 
     def get_id(self):
+        """ Return node id.
+        """
         return self.__id
 
     def set_id(self, id):
+        """ Set id of the node.
+        """
         self.__id = id
-        self.internal_data["id"] = self.__id
+        self.internal_data["id"] = self.__id  # TODO: remove duplication
 
     def _init_internal_data(self, d):
         self.internal_data.update(d)
 
     # -- the ugly back reference --
-    def set_compositenode(self, upper):
+    def set_compositenode(self, upper):  # TODO: remove GRUUIK
         self._composite_node = proxy(upper)
 
     def set_data(self, key, value, notify=True):
-        """ Set internal node data """
+        """ Associate a data with the node.
+
+        args:
+            - key (any): key for the dict of properties.
+            - value (any): value to associate to the key.
+            - notify (bool): tell the node to notify listeners.
+        """
         self.internal_data[key] = value
-        if(notify):
+
+        if notify:
             self.notify_listeners(("data_modified", key, value))
 
-    def close(self):
+    def close(self):  # TODO: when is this method called
         self.notify_listeners(("close", self))
 
-    def reset(self):
+    def reset(self):  # TODO: useless?? remove?
         """ Reset Node """
         pass
 
-    def reload(self):
+    def reload(self):  # TODO: useless?? remove?
         """ Reset Node """
         pass
 
-    def invalidate(self):
+    def invalidate(self):  # TODO: it needs to be in the algo not in the node
         """ Invalidate Node """
         pass
 
     def set_factory(self, factory):
-        """ Set the factory of the node (if any) """
+        """ Associate a factory to the node.
+
+        args:
+            - factory (NodeFactory): factory to associate.
+        """
         self.factory = factory
 
     def get_factory(self):
-        """ Return the factory of the node (if any) """
+        """ Return a factory able to produce this node.
+
+        return:
+            - (NodeFactory) or None if no factory associated.
+        """
         return self.factory
 
-    def get_raise_exception(self):
+    def get_raise_exception(self):  # TODO: WTF!!!
         return self.__inError
 
-    def set_raise_exception(self, val):
+    def set_raise_exception(self, val):  # TODO: WTF!!!
         self.__inError = val
         self.notify_listeners(("exception_state_changed", val))
 
     raise_exception = property(get_raise_exception, set_raise_exception)
+    # TODO: double WTF!!
 
 
 class Node(AbstractNode):
-    """
-    It is a callable object with typed inputs and outputs.
+    """ A Node is a callable object with typed inputs and outputs.
     Inputs and Outpus are indexed by their position or by a name (str)
     """
 
@@ -175,35 +194,55 @@ class Node(AbstractNode):
         return conversionTxt, retEvent
 
     def __init__(self, inputs=(), outputs=()):
-        """
+        """ Constructor
 
-        :param inputs: list of dict(name='X', interface=IFloat, value=0)
-        :param outputs: list of dict(name='X', interface=IFloat)
+        args:
+            - inputs (list of dict(name='X', interface=IFloat, value=0) )
+            - outputs (list of dict(name='X', interface=IFloat) )
 
         .. note::
             if IO names are not a string, they will be converted with str()
         """
-
         AbstractNode.__init__(self)
         self.clear_inputs()
         self.clear_outputs()
         self.set_io(inputs, outputs)
 
         # Node State
-        self.modified = True
+        self.modified = True  # TODO: need to be in eval algo
 
         # Internal Data
-        self.internal_data["caption"] = '' # str(self.__class__.__name__)
+        self.internal_data["caption"] = ''  # str(self.__class__.__name__)
         self.internal_data["lazy"] = True
-        self.internal_data["block"] = False # Do not evaluate the node
+        self.internal_data["block"] = False  # Do not evaluate the node
         self.internal_data["priority"] = 0
-        self.internal_data["hide"] = True # hide in composite node widget
+        self.internal_data["hide"] = True  # hide in composite node widget
         self.internal_data["port_hide_changed"] = set()
         # Add delay
         self.internal_data["delay"] = 0
 
         # Observed object to notify final nodes wich are continuously evaluated
-        self.continuous_eval = Observed()
+        self.continuous_eval = Observed()  # TODO: a bit too add hoc
+
+    def clear_inputs(self):  # TODO: transform into private method???
+        # Values
+        self.inputs = []
+        # Description (list of dict (name=, interface=, ...))
+        self.input_desc = []
+        # translation of name to id or id to id (identity)...
+        self.map_index_in = {}
+        # Input states : "connected", "hidden"
+        self.input_states = []
+        self.notify_listeners(("cleared_input_ports",))
+
+    def clear_outputs(self):  # TODO: transform into private method???
+        # Values
+        self.outputs = []
+        # Description (list of dict (name=, interface=, ...))
+        self.output_desc = []
+        # translation of name to id or id to id (identity)...
+        self.map_index_out = {}
+        self.notify_listeners(("cleared_output_ports",))
 
     def notify_listeners(self, event):
         txt, trevent = Node.is_deprecated_event(event)
@@ -218,209 +257,250 @@ class Node(AbstractNode):
         raise NotImplementedError()
 
     def get_tip(self):
+        """ Return associated tooltip.
+
+        Default to documentation of the class.
+
+        return:
+            - (str)
+        """
         return self.__doc__
 
     def copy_to(self, other):
+        """ Copy node attributes and data.
+        """
         # we copy some attributes.
         self.transfer_listeners(other)
         # other.internal_data.update(self.internal_data)
         other.get_ad_hoc_dict().update(self.get_ad_hoc_dict())
-        for portOld, portNew in zip(self.input_desc + self.output_desc,
-                                    other.input_desc + other.output_desc):
-            portOld.copy_to(portNew)
+
+        # copy input descriptions
+        for port_self, port_other in zip(self.input_desc, other.input_desc):
+            port_self.copy_to(port_other)
+
+        # copy output descriptions
+        for port_self, port_other in zip(self.output_desc, other.output_desc):
+            port_self.copy_to(port_other)
 
     def get_process_obj(self):
-        """ Return the process obj """
+        """ Return the process obj.
+        """
         return self
 
     # property
-    process_obj = property(get_process_obj)
+    process_obj = property(get_process_obj)  # TODO: get read of properties
 
     def set_factory(self, factory):
-        """ Set the factory of the node (if any)
-        and uptdate caption """
-        self.factory = factory
-        if factory:
+        """ Associate a factory to the node.
+
+        args:
+            - factory (NodeFactory): factory to associate.
+        """
+        AbstractNode.set_factory(self, factory)
+        if factory is not None:
             self.set_caption(factory.name)
 
     def get_input_port(self, name=None):
-        """Gets port by name.
+        """ Get a description of a port.
 
-        Long description of the function functionality.
+        args:
+            - name(str): name of the input port
 
-        :param name: the name of the port
-        :type name: string
-        :returns: Input port characterized by name
-        :rtype: InputPort
-
+        return:
+            - port (name, Interface, default_value)
         """
-        index = self.map_index_in[name]
+        index = self.map_index_in[name]  # TODO: where is this one created
         return self.input_desc[index]
 
     ##############
     # Properties #
     ##############
-    def get_lazy(self):
-        """todo"""
+    def is_lazy(self):
+        """ Check if the node allows lazy evaluation.
+        """
         return self.internal_data.get("lazy", True)
 
-    def is_lazy(self):
-        return self.get_lazy()
-
-    def set_lazy(self, data):
+    def get_lazy(self):
         """todo"""
-        self.internal_data["lazy"] = data
-        self.notify_listeners(("internal_data_changed", "lazy", data))
+        return self.is_lazy()
 
-    lazy = property(get_lazy, set_lazy)
+    def set_lazy(self, flag):  # TODO: no blocking of notifiers for this one?
+        """ Set the node to allow lazy evaluation.
+
+        args:
+            - flag (bool)
+        """
+        self.internal_data["lazy"] = flag
+        self.notify_listeners(("internal_data_changed", "lazy", flag))
+
+    lazy = property(get_lazy, set_lazy)  # TODO: remove
 
     def get_delay(self):
-        """todo"""
+        """ Retrieve associated evaluation delay.
+        """
         return self.internal_data.get("delay", 0)
 
-    def set_delay(self, delay):
-        """todo"""
+    def set_delay(self, delay):  # TODO: no blocking of notifiers for this one?
+        """ Set minimum delay between two evaluations.
+
+        args:
+            - delay (int)
+        """
         self.internal_data["delay"] = delay
         self.notify_listeners(("internal_data_changed", "delay", delay))
 
-    delay = property(get_delay, set_delay)
+    delay = property(get_delay, set_delay)  # TODO: remove
 
-    def get_block(self):
-        """todo"""
+    def is_block(self):
+        """ Check if the node block evaluation.
+        """
         return self.internal_data.get("block", False)
 
-    def set_block(self, data):
-        """todo"""
-        self.internal_data["block"] = data
-        self.notify_listeners(("internal_data_changed", "blocked", data))
+    def get_block(self):
+        return self.is_block()
 
-    block = property(get_block, set_block)
+    def set_block(self, flag):
+        """ Set the node to block evaluation.
+
+        args:
+            - flag (bool)
+        """
+        self.internal_data["block"] = flag
+        self.notify_listeners(("internal_data_changed", "blocked", flag))
+
+    block = property(get_block, set_block)  # TODO: remove
 
     def get_user_application(self):
-        """todo"""
+        """ Retrieve user_application associated with the node.
+        """
         return self.internal_data.get("user_application", False)
 
-    def set_user_application(self, data):
-        """todo"""
-        self.internal_data["user_application"] = data
-        self.notify_listeners(("internal_data_changed", "user_application", data))
+    def set_user_application(self, appli):  # TODO: better doc
+        """ Associate a user application with the node.
 
-    user_application = property(get_user_application, set_user_application)
+        args:
+            - appli (UNKNOWN):
+        """
+        self.internal_data["user_application"] = appli
+        self.notify_listeners(("internal_data_changed",
+                               "user_application",
+                               appli))
 
-    def set_caption(self, newcaption):
-        """ Define the node caption """
+    user_application = property(get_user_application,
+                                set_user_application)  # TODO: remove
+
+    def set_caption(self,
+                    newcaption):  # TODO: no blocking of notifiers for this one?
+        """ Define the node caption.
+
+        args:
+            - newcaption (str)
+        """
         self.internal_data['caption'] = newcaption
         self.notify_listeners(("caption_modified", newcaption))
 
     def get_caption(self):
-        """ Return the node caption """
+        """ Return the node caption.
+
+        return:
+            - caption (str)
+        """
         return self.internal_data.get('caption', "")
 
-    caption = property(get_caption, set_caption)
+    caption = property(get_caption, set_caption)  # TODO: remove
 
     def is_port_hidden(self, index_key):
-        """ Return the hidden state of a port """
+        """ Check if a port is hidden.
+
+        Only input ports can be hidden.
+
+        args:
+            - index_key (str): local name of an input port
+
+        return:
+            - (bool)
+        """
         index = self.map_index_in[index_key]
-        s = self.input_desc[index].is_hidden() # get('hide', False)
-        changed = self.internal_data["port_hide_changed"]
+        s = self.input_desc[index].is_hidden()  # get('hide', False)
+        changed = self.internal_data["port_hide_changed"]  # TODO: WTF!
 
         c = index in changed
 
-        if(index in changed):
+        if index in changed:
             return not s
         else:
             return s
 
-    def set_port_hidden(self, index_key, state):
-        """
-        Set the hidden state of a port.
+    def set_port_hidden(self, index_key,
+                        state):  # TODO: no blocking of notifiers for this one?
+        """ Set an input port to be hidden or not.
 
-        :param index_key: the input port index.
-        :param state: a boolean value.
+        args:
+            - index_key (str): local name of port
+            - state (bool): hidden flag
         """
         index = self.map_index_in[index_key]
-        s = self.input_desc[index].is_hidden() # get('hide', False)
+        s = self.input_desc[index].is_hidden()  # get('hide', False)
 
         changed = self.internal_data["port_hide_changed"]
 
-        if (s != state):
+        if s != state:
             changed.add(index)
             self.input_desc[index].get_ad_hoc_dict().set_metadata("hide", state)
             self.notify_listeners(("hiddenPortChange",))
-        elif(index in changed):
+        elif index in changed:
             changed.remove(index)
             self.input_desc[index].get_ad_hoc_dict().set_metadata("hide", state)
             self.notify_listeners(("hiddenPortChange",))
-
+            # TODO: any other case?
 
     # Status
-    def unvalidate_input(self, index_key, notify=True):
-        """
-        Unvalidate node and notify listeners.
+    def unvalidate_input(self, index_key,
+                         notify=True):  # TODO: correct spelling and remove function
+        """ Invalidate node and notify listeners.
 
         This method is called when the input value has changed.
         """
         self.modified = True
         index = self.map_index_in[index_key]
-        if(notify):
+        if (notify):
             self.notify_listeners(("input_modified", index))
             self.continuous_eval.notify_listeners(("node_modified",))
 
     # Declarations
     def set_io(self, inputs, outputs):
-        """
-        Define the number of inputs and outputs
+        """ Associate a definitions of ports with this node.
 
-        :param inputs: list of dict(name='X', interface=IFloat, value=0)
-        :param outputs: list of dict(name='X', interface=IFloat)
+        args:
+            - inputs (list of dict(name='X', interface=IFloat, value=0))
+            - outputs (list of dict(name='X', interface=IFloat))
         """
-
-        # # Values
-        if(inputs is None or len(inputs) != len(self.inputs)):
+        if inputs is None or len(inputs) != len(
+                self.inputs):  # TODO: what for, always clear!!
             self.clear_inputs()
-            if inputs:
+            if inputs is not None:  # TODO: remove, inputs=[] by default
                 for d in inputs:
                     self.add_input(**d)
 
-        if(outputs is None or len(outputs) != len(self.outputs)):
+        if outputs is None or len(outputs) != len(
+                self.outputs):  # TODO: what for, always clear!!
             self.clear_outputs()
-            if outputs:
+            if outputs is not None:  # TODO: remove, outputs=[] by default
                 for d in outputs:
                     self.add_output(**d)
 
-        # to_script
+        # to_script # TODO: remove unused
         self._to_script_func = None
 
-    def clear_inputs(self):
-        # Values
-        self.inputs = []
-        # Description (list of dict (name=, interface=, ...))
-        self.input_desc = []
-        # translation of name to id or id to id (identity)...
-        self.map_index_in = {}
-        # Input states : "connected", "hidden"
-        self.input_states = []
-        self.notify_listeners(("cleared_input_ports",))
-
-    def clear_outputs(self):
-        # Values
-        self.outputs = []
-        # Description (list of dict (name=, interface=, ...))
-        self.output_desc = []
-        # translation of name to id or id to id (identity)...
-        self.map_index_out = {}
-        self.notify_listeners(("cleared_output_ports",))
-
-
     def add_input(self, **kargs):
-        """ Create an input port """
-
+        """ Create an input port.
+        """
         # Get parameters
         name = str(kargs['name'])
         interface = kargs.get('interface', None)
 
         # default value
-        if(interface and not kargs.has_key('value')):
+        if interface is not None and not kargs.has_key('value'):
             if isinstance(interface, str):
                 # Create mapping between interface name and interface class
                 from openalea.core.interface import TypeNameInterfaceMap
@@ -433,7 +513,7 @@ class Node(AbstractNode):
 
         value = copy(value)
 
-        name = str(name) # force to have a string
+        name = str(name)  # force to have a string  # TODO: done already
         self.inputs.append(None)
 
         port = InputPort(self)
@@ -443,11 +523,12 @@ class Node(AbstractNode):
         self.input_states.append(None)
         index = len(self.inputs) - 1
         self.map_index_in[name] = index
-        self.map_index_in[index] = index
+        self.map_index_in[index] = index  # TODO: hack gruuik to remove
         port.set_id(index)
 
         self.set_input(name, value, False)
         port.get_ad_hoc_dict().set_metadata("hide",
+                                            # TODO: use node.set_hidden instead
                                             kargs.get("hide", False))
         self.notify_listeners(("input_port_added", port))
         return port
@@ -471,25 +552,28 @@ class Node(AbstractNode):
 
     # I/O Functions
 
-    def set_input(self, key, val=None, notify=True):
-        """
+    def set_input(self, key, val=None,
+                  notify=True):  # TODO: remove, data are not to be stored in the node
+        """ Store a value on a specific input port.
+
         Define the input value for the specified index/key
         """
         index = self.map_index_in[key]
 
         changed = True
-        if(self.lazy):
+        if (self.lazy):
             # Test if the inputs has changed
             try:
                 changed = (cmp(self.inputs[index], val) != 0)
             except:
                 pass
 
-        if(changed):
+        if (changed):
             self.inputs[index] = val
             self.unvalidate_input(index, notify)
 
-    def set_output(self, key, val):
+    def set_output(self, key,
+                   val):  # TODO: remove, data are not to be stored in the node
         """
         Define the input value for the specified index/key
         """
@@ -498,20 +582,23 @@ class Node(AbstractNode):
         self.outputs[index] = val
         self.notify_listeners(("output_modified", key, val))
 
-    def output(self, key):
+    def output(self,
+               key):  # TODO: remove, data are not to be stored in the node
         return self.get_output(key)
 
-    def get_input(self, index_key):
+    def get_input(self,
+                  index_key):  # TODO: remove, data are not to be stored in the node
         """ Return the input value for the specified index/key """
         index = self.map_index_in[index_key]
         return self.inputs[index]
 
-    def get_output(self, index_key):
+    def get_output(self,
+                   index_key):  # TODO: remove, data are not to be stored in the node
         """ Return the output for the specified index/key """
         index = self.map_index_out[index_key]
         return self.outputs[index]
 
-    def get_input_state(self, index_key):
+    def get_input_state(self, index_key):  # TODO: What is a port state???
         index = self.map_index_in[index_key]
         return self.input_states[index]
 
@@ -523,23 +610,26 @@ class Node(AbstractNode):
         self.unvalidate_input(index)
 
     def get_nb_input(self):
-        """ Return the nb of input ports """
+        """ Return the nb of input ports
+        """
         return len(self.inputs)
 
     def get_nb_output(self):
-        """ Return the nb of output ports """
+        """ Return the nb of output ports
+        """
         return len(self.outputs)
 
     # Functions used by the node evaluator
 
-    def eval(self):
+    def eval(self):  # TODO: remove, eval has to be performed outside of node
         """
         Evaluate the node by calling __call__
         Return True if the node needs a reevaluation
         and a timed delay if the node needs a reevaluation at a later time.
         """
         # lazy evaluation
-        if self.block and self.get_nb_output() != 0 and self.output(0) is not None:
+        if self.block and self.get_nb_output() != 0 and self.output(
+                0) is not None:
             return False
         if (self.delay == 0 and self.lazy) and not self.modified:
             return False
@@ -562,9 +652,9 @@ class Node(AbstractNode):
 
             self.output_desc[0].notify_listeners(("tooltip_modified",))
 
-        else: # multi output
-            if(not isinstance(outlist, tuple) and
-               not isinstance(outlist, list)):
+        else:  # multi output
+            if (not isinstance(outlist, tuple) and
+                    not isinstance(outlist, list)):
                 outlist = (outlist,)
 
             for i in range(min(len(outlist), len(self.outputs))):
@@ -586,7 +676,6 @@ class Node(AbstractNode):
         odict.update(AbstractNode.__getstate__(self))
 
         odict['modified'] = True
-
 
         outputs = range(len(self.outputs))
         for i in range(self.get_nb_output()):
@@ -630,7 +719,7 @@ class Node(AbstractNode):
         for port in self.output_desc:
             port.vertex = ref(self)
 
-    def reload(self):
+    def reload(self):  # TODO: remove, data are not to be stored in the node
         """ Reset ports """
         for i in range(self.get_nb_output()):
             self.outputs[i] = None
@@ -640,20 +729,20 @@ class Node(AbstractNode):
             # if(not connected or self.input_states[i] is "connected"):
             self.set_input(i, self.input_desc[i].get('value', None))
 
-        if(i > 0):
+        if (i > 0):
             self.invalidate()
 
-    def reset(self):
+    def reset(self):  # TODO: remove, data are not to be stored in the node
         """ Reset ports """
         for i in range(self.get_nb_output()):
             self.outputs[i] = None
 
         i = self.get_nb_input()
 
-        if(i > 0):
+        if (i > 0):
             self.invalidate()
 
-    def invalidate(self):
+    def invalidate(self):  # TODO: remove, evaluation algorithm instead
         """ Invalidate node """
 
         self.modified = True
@@ -661,36 +750,40 @@ class Node(AbstractNode):
 
         self.continuous_eval.notify_listeners(("node_modified", self))
 
-# X     @property
-# X     def outputs(self):
-# X         return [self.output(i) for i in range(self.get_nb_output())]
+    # X     @property
+    # X     def outputs(self):
+    # X         return [self.output(i) for i in range(self.get_nb_output())]
 
-    def to_script (self):
+    def to_script(self):  # TODO: deprecated
         """Script translation of this node.
         """
-        if self._to_script_func is None :
+        if self._to_script_func is None:
             return "#node %s do not define any scripting\n" % self.factory.name
-        else :
+        else:
             return self._to_script_func(self.inputs, self.outputs)
 
 
 class FuncNode(Node):
-    """ Node with external function or function """
+    """ Node with external function.
+    """
 
     def __init__(self, inputs, outputs, func):
-        """
-        :param inputs: list of dict(name='X', interface=IFloat, value=0)
-        :param outputs: list of dict(name='X', interface=IFloat)
-        :param func: A function
-        """
+        """ Constructor
 
+        args:
+            - inputs (list of dict(name='X', interface=IFloat, value=0) )
+            - outputs (list of dict(name='X', interface=IFloat) )
+            - func (callable): function used to perform node evaluation
+
+        .. note::
+            if IO names are not a string, they will be converted with str()
+        """
         Node.__init__(self, inputs, outputs)
-        self.func = func
-        self.__doc__ = func.__doc__
+        self.func = func  # TODO: makes private
+        self.__doc__ = func.__doc__  # TODO: override get_tip instead??
 
     def __call__(self, inputs=()):
-        """ Call function. Must be overriden """
-        if(self.func):
+        if self.func is not None:
             return self.func(*inputs)
 
     def get_process_obj(self):
@@ -698,16 +791,8 @@ class FuncNode(Node):
 
         return self.func
 
-    process_obj = property(get_process_obj)
-
-
-# Utility functions
-def gen_port_list(size):
-    """ Generate a list of port description """
-    mylist = []
-    for i in range(size):
-        mylist.append(dict(name='t' + str(i), interface=None, value=i))
-    return mylist
+    process_obj = property(
+        get_process_obj)  # TODO: duplication, another reason not to use properties
 
 
 def initialise_standard_metadata():
@@ -715,7 +800,7 @@ def initialise_standard_metadata():
     # we declare what are the node model ad hoc data we require:
     AbstractNode.extend_ad_hoc_slots("position", list, [0, 0], "posx", "posy")
     Node.extend_ad_hoc_slots("userColor", list, None, "user_color")
-    Node.extend_ad_hoc_slots("useUserColor", bool, True, "use_user_color",)
+    Node.extend_ad_hoc_slots("useUserColor", bool, True, "use_user_color", )
 
 
 initialise_standard_metadata()

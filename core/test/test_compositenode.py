@@ -20,7 +20,7 @@ __revision__ = " $Id$ "
 
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.compositenode import CompositeNodeFactory, CompositeNode
-from openalea.core.node import gen_port_list, RecursionError
+from openalea.core.node import RecursionError
 from openalea.core import Package
 from openalea.core.path import path
 
