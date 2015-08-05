@@ -25,21 +25,22 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 import imp
-import inspect
+# import inspect
 import os
 import sys
-import string
-import types
-from copy import copy, deepcopy
+# import string
+# import types
+from copy import copy#, deepcopy
 from weakref import ref, proxy
 
 # from signature import get_parameters
-import signature as sgn
-from observer import Observed, AbstractListener
-from actor import IActor
-from metadatadict import MetaDataDict, HasAdHoc
-from interface import TypeNameInterfaceMap
+# import signature as sgn
+from observer import Observed#, AbstractListener
+# from actor import IActor
+from metadatadict import HasAdHoc#, MetaDataDict
+# from interface import TypeNameInterfaceMap
 from openalea.core.node_port import InputPort, OutputPort
+
 
 # Exceptions
 class RecursionError (Exception):
