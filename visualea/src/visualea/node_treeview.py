@@ -200,7 +200,7 @@ class PkgModel (qt.QtCore.QAbstractItemModel) :
         else:
             parentItem = parent.internalPointer()
 
-        l = list(parentItem.iter_public_values())
+        l = list(parentItem.public_values())
         l.sort(item_compare)# (lambda x,y : cmp(x.get_id(), y.get_id())))
         childItem = l[row]
 

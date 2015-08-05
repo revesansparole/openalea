@@ -37,7 +37,7 @@ from pkg_resources import iter_entry_points
 from openalea.core.singleton import Singleton
 from openalea.core.observer import Observed
 from openalea.core.settings import get_userpkg_dir, Settings
-from openalea.core.pkgdict import PackageDict, is_protected, protected
+from openalea.core.pkgdict import PackageDict, is_protected, protect
 from openalea.core import logger
 from openalea.core.package import (Package, UserPackage, PyPackageReader,
 PyPackageReaderWralea)
@@ -692,7 +692,7 @@ class PluginManager(Observed):
     def rename_package(self, old_name, new_name):
         """ Rename package 'old_name' to 'new_name' """
 
-        self.pkgs[protected(old_name)] = self.pkgs[old_name]
+        self.pkgs[protect(old_name)] = self.pkgs[old_name]
         self.pkgs[new_name] = self.pkgs[old_name]
         self.pkgs[old_name].name = new_name
 

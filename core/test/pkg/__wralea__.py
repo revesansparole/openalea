@@ -2,7 +2,7 @@
 
 
 from openalea.core.external import *
-from openalea.core.pkgdict import protected
+from openalea.core.pkgdict import protect
 
 
 __editable__ = True
@@ -53,7 +53,7 @@ range_ = Factory(name="range",
 
 __all__.append('range_')
 
-list_ = Factory( name=protected("list"),
+list_ = Factory( name=protect("list"),
                  description="Python list",
                  category="datatype",
                  nodemodule="nodes",

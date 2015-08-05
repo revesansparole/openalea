@@ -184,7 +184,8 @@ class RDVNode(Node):
         return inputs[0], inputs[1]
 
 
-from openalea.core.datapool import DataPool
+from openalea.visualea.datapool import DataPool
+# TODO: move to visualea
 
 
 class PoolReader(Node):

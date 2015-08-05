@@ -19,7 +19,7 @@ __revision__ = " $Id$ "
 
 
 from openalea.core.external import * #IGNORE:W0614
-from openalea.core.pkgdict import protected
+from openalea.core.pkgdict import protect
 
 
 __name__ = "openalea.flow control"
@@ -253,7 +253,7 @@ whilemulti2 = Factory(name="while multivariate2",
 
 __all__.append('whilemulti2')
 
-cmd = Factory(name=protected("command"), 
+cmd = Factory(name=protect("command"),
              description="Call a system command", 
              category="System", 
              nodemodule="openalea.core.system.systemnodes",

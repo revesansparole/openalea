@@ -24,7 +24,7 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 
-#import inspect
+# import inspect
 import os
 import sys
 import string
@@ -32,16 +32,17 @@ import imp
 import time
 import shutil
 
-from openalea.core.pkgdict import PackageDict, protected
+from openalea.core.pkgdict import PackageDict, protect
 from openalea.core.path import path as _path
 from openalea.core.vlab import vlab_object
-#from openalea.core import logger
+
+
+# from openalea.core import logger
 
 # Exceptions
 
 
-class UnknownNodeError (Exception):
-
+class UnknownNodeError(Exception):
     def __init__(self, name):
         Exception.__init__(self)
         self.message = "Cannot find node : %s" % (name)
@@ -59,6 +60,7 @@ class DynamicPackage(PackageDict):
     """
     Package for dynamical parsing of python file
     """
+
     def __init__(self, name, metainfo):
         self.metainfo = metainfo
         self.name = name
@@ -122,7 +124,7 @@ class Package(PackageDict):
                 self.path = path
                 self.wralea_path = os.path.join(self.path, "__wralea__.py")
 
-            #wralea_name = name.replace('.', '_')
+                # wralea_name = name.replace('.', '_')
 
     def is_directory(self):
         """
@@ -147,14 +149,14 @@ class Package(PackageDict):
         The filename are relative to self.path
         """
 
-        #assert self.is_directory()
+        # assert self.is_directory()
 
         ret = []
         for file in os.listdir(self.path):
             src = os.path.join(self.path, file)
             if (not os.path.isfile(src) or
-               file.endswith(".pyc") or
-               file.startswith(".")):
+                    file.endswith(".pyc") or
+                    file.startswith(".")):
                 continue
             ret.append(file)
 
@@ -199,9 +201,10 @@ class Package(PackageDict):
     def get_tip(self):
         """ Return the package description """
 
-        str = "<b>Package:</b>%s<br/>\n" % (self.name, )
+        str = "<b>Package:</b>%s<br/>\n" % (self.name,)
         try:
-            str += "<b>Description : </b>%s<br/>\n" % (self.metainfo['description'].replace('\n', '<br/>'), )
+            str += "<b>Description : </b>%s<br/>\n" % (
+            self.metainfo['description'].replace('\n', '<br/>'),)
         except:
             pass
         try:
@@ -209,12 +212,13 @@ class Package(PackageDict):
         except:
             pass
         try:
-            str += "<b>Institutes :</b> %s<br/>\n" % (self.metainfo['institutes'], )
+            str += "<b>Institutes :</b> %s<br/>\n" % (
+            self.metainfo['institutes'],)
         except:
             pass
 
         try:
-            str += "<b>URL : </b>%s<br/>\n" % (self.metainfo['url'], )
+            str += "<b>URL : </b>%s<br/>\n" % (self.metainfo['url'],)
         except:
             pass
 
@@ -233,7 +237,8 @@ class Package(PackageDict):
         """ Add to the package a factory ( node or subgraph ) """
 
         if (factory.name in self):
-            raise Exception("Factory %s already defined. Ignored !" % (factory.name, ))
+            raise Exception(
+                "Factory %s already defined. Ignored !" % (factory.name,))
 
         self[factory.name] = factory
         factory.package = self
@@ -247,18 +252,18 @@ class Package(PackageDict):
 
         except Exception, e:
             factory.package = None
-            del(self[factory.name])
+            del (self[factory.name])
             raise e
 
         # Add Aliases
         if (factory.alias):
             for a in factory.alias:
-                self[protected(a)] = factory
+                self[protect(a)] = factory
 
     def update_factory(self, old_name, factory):
         """ Update factory (change its name) """
 
-        del(self[old_name])
+        del (self[old_name])
         self.add_factory(factory)
 
     def get_names(self):
@@ -325,7 +330,7 @@ class UserPackage(Package):
             self[k] = v.copy(replace_pkg=(pkg, self),
                              path=self.path)
 
-            #self.update(copy.deepcopy(pkg))
+            # self.update(copy.deepcopy(pkg))
 
         self.write()
 
@@ -374,7 +379,7 @@ class UserPackage(Package):
             if in_value is not None:
                 arg = '%s=%s' % (in_name, repr(in_value))
             else:
-                arg = '%s' % (in_name, )
+                arg = '%s' % (in_name,)
             ins.append(arg)
         in_args = ', '.join(ins)
 
@@ -387,8 +392,8 @@ class UserPackage(Package):
             # change its name.
             while arg in in_names:
                 arg = 'out_' + arg
-            out_values += '%s = None; ' % (arg, )
-            return_values.append('%s' % (arg, ))
+            out_values += '%s = None; ' % (arg,)
+            return_values.append('%s' % (arg,))
 
         if return_values:
             return_values = ', '.join(return_values) + ','
@@ -504,7 +509,7 @@ def %s(%s):
         """ Write change on disk """
 
         Package.__delitem__(self, key)
-        #self.write()
+        # self.write()
 
 
 ################################################################################
@@ -587,7 +592,7 @@ class PyPackageReader(AbstractPackageReader):
                 pass
 
         except:  # Treat all exception
-            pkgmanager.add('%s is invalid :' % (self.filename, ))
+            pkgmanager.add('%s is invalid :' % (self.filename,))
 
         if (file):
             file.close()
@@ -666,14 +671,15 @@ class PyPackageReaderWralea(PyPackageReader):
         # Add Package Aliases
         palias = wraleamodule.__dict__.get('__alias__', [])
         for name in palias:
-            if protected(name) in pkgmanager:
-                alias_pkg = pkgmanager[protected(name)]
+            if protect(name) in pkgmanager:
+                alias_pkg = pkgmanager[protect(name)]
                 for name_factory, factory in p.iteritems():
                     if (name_factory not in alias_pkg and
-                       (alias_pkg.name + '.' + name_factory) not in pkgmanager):
+                                (
+                                        alias_pkg.name + '.' + name_factory) not in pkgmanager):
                         alias_pkg[name_factory] = factory
             else:
-                pkgmanager[protected(name)] = p
+                pkgmanager[protect(name)] = p
 
 
 ######################
@@ -762,11 +768,12 @@ $FACTORY_DECLARATION
             val = repr(v)
             metainfo += "%s = %s\n" % (key, val)
 
-        result = pstr.safe_substitute(PKGNAME="__name__ = %s" % (repr(self.package.name)),
-                                      METAINFO=metainfo,
-                                      ALL="__all__ = %s" % (repr(all), ),
-                                      FACTORY_DECLARATION=fstr,
-                                      )
+        result = pstr.safe_substitute(
+            PKGNAME="__name__ = %s" % (repr(self.package.name)),
+            METAINFO=metainfo,
+            ALL="__all__ = %s" % (repr(all),),
+            FACTORY_DECLARATION=fstr,
+            )
 
         return result
 
