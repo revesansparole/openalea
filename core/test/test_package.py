@@ -1,19 +1,20 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
+import os, shutil
+
 from openalea.core.package import *
 from openalea.core.node import gen_port_list
-import os, shutil
 
 
 def test_package():
     metainfo = {'version': '0.0.1',
-              'license': 'CECILL-C',
-              'authors': 'OpenAlea Consortium',
-              'institutes': 'INRIA/CIRAD',
-              'description': 'Base library.',
-              'url': 'http://openalea.gforge.inria.fr',
-              'icon': ''}
+                'license': 'CECILL-C',
+                'authors': 'OpenAlea Consortium',
+                'institutes': 'INRIA/CIRAD',
+                'description': 'Base library.',
+                'url': 'http://openalea.gforge.inria.fr',
+                'icon': ''}
 
     package = Package("Test", metainfo)
     assert package != None
@@ -27,18 +28,16 @@ class TestUserPackage():
         shutil.rmtree("tstpkg")
 
     def test_case_1(self):
-
         metainfo = {'version': '0.0.1',
-                  'license': 'CECILL-C',
-                  'authors': 'OpenAlea Consortium',
-                  'institutes': 'INRIA/CIRAD',
-                  'description': 'Base library.',
-                  'url': 'http://openalea.gforge.inria.fr',
-                  'icon': ''}
+                    'license': 'CECILL-C',
+                    'authors': 'OpenAlea Consortium',
+                    'institutes': 'INRIA/CIRAD',
+                    'description': 'Base library.',
+                    'url': 'http://openalea.gforge.inria.fr',
+                    'icon': ''}
 
         path = os.path.join(os.path.curdir, "tstpkg")
         mypackage = UserPackage("DummyPkg", metainfo, path)
-
 
         factory = mypackage.create_user_node("TestFact",
                                              "category test",
@@ -46,8 +45,8 @@ class TestUserPackage():
                                              gen_port_list(3),
                                              gen_port_list(2))
         assert path in factory.search_path
-        assert len(factory.inputs)==3
-        assert len(factory.outputs)==2
+        assert len(factory.inputs) == 3
+        assert len(factory.outputs) == 2
 
         assert os.path.exists("tstpkg/TestFact.py")
         execfile("tstpkg/TestFact.py")

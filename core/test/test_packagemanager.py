@@ -14,9 +14,11 @@
 #       OpenAlea WebSite : http://openalea.gforge.inria.fr
 #
 """Test the Package Manager"""
-from openalea.core.pkgmanager import PackageManager
+
 import os
+
 import openalea
+from openalea.core.pkgmanager import PackageManager
 from openalea.core.settings import Settings
 
 
@@ -49,11 +51,11 @@ def test_load_pm():
     assert simpleop
 
     addfactory = simpleop.get_factory('command')
-    assert addfactory != None
+    assert addfactory is not None
     assert addfactory.instantiate()
 
     valfactory = simpleop.get_factory('rendez vous')
-    assert valfactory != None
+    assert valfactory is not None
 
 
 def test_category():
@@ -66,7 +68,7 @@ def test_category():
     for cat in pkgman.category.values():
         s = set()
         for factory in cat:
-            assert not factory in s
+            assert factory not in s
             s.add(factory)
 
 
@@ -80,13 +82,11 @@ def test_search():
     print res
     assert "sum" in res[0].name
 
-
     # comment these 3 lines because system.command is not part
     # of any nodes anymore.
     # res = pkgman.search_node("system.command")
     # print res
     # assert "command" in res[0].name
-
 
 # test has been removed
 # too dangerous to test writing on a singleton

@@ -411,7 +411,7 @@ def %s(%s):
         file.write(my_template)
         file.close()
 
-        from openalea.core.node import NodeFactory
+        from openalea.core.node_factory import NodeFactory
 
         factory = NodeFactory(name=name,
                               category=category,

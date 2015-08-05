@@ -23,8 +23,10 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 
+from copy import copy, deepcopy
 import inspect
 import os
+import string
 import sys
 import types
 from weakref import ref

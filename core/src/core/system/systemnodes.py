@@ -19,7 +19,8 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-from openalea.core.node import AbstractNode, Node, Annotation
+from openalea.core.node import AbstractNode, Node
+from openalea.core.node_annotation import Annotation
 from openalea.core.dataflow import SubDataflow
 
 DEBUG = False

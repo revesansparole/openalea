@@ -18,16 +18,17 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-
-from openalea.core.pkgmanager import PackageManager
-from openalea.core.compositenode import CompositeNodeFactory, CompositeNode
-from openalea.core.node import Factory, gen_port_list
 import os
 import shutil
 
+from openalea.core.pkgmanager import PackageManager
+from openalea.core.compositenode import CompositeNodeFactory, CompositeNode
+from openalea.core.node import gen_port_list
+from openalea.core.node_factory import Factory
+
 
 def setup_module():
-    try:
+    try:  # TODO: GRUUIK
         path = os.path.join(os.path.curdir, "MyTestPackage")
         shutil.rmtree(path)
 
@@ -36,7 +37,6 @@ def setup_module():
 
 
 def test_compositenodewriter():
-
     setup_module()
 
     pm = PackageManager()
@@ -44,7 +44,7 @@ def test_compositenodewriter():
 
     sg = CompositeNode(inputs=[dict(name="%d" % i) for i in xrange(3)],
                        outputs=[dict(name="%d" % i) for i in xrange(4)],
-                      )
+                       )
 
     # build the compositenode factory
     addid = sg.add_node(pm.get_node("pkg_test", "+"))
@@ -60,13 +60,13 @@ def test_compositenodewriter():
     sg.to_factory(sgfactory)
     # Package
     metainfo = {'version': '0.0.1',
-               'license': 'CECILL-C',
-               'authors': 'OpenAlea Consortium',
-               'institutes': 'INRIA/CIRAD',
-               'description': 'Base library.',
-               'url': 'http://openalea.gforge.inria.fr'}
+                'license': 'CECILL-C',
+                'authors': 'OpenAlea Consortium',
+                'institutes': 'INRIA/CIRAD',
+                'description': 'Base library.',
+                'url': 'http://openalea.gforge.inria.fr'}
 
-    package1 = pm.create_user_package("MyTestPackage", 
+    package1 = pm.create_user_package("MyTestPackage",
                                       metainfo, os.path.curdir)
     package1.add_factory(sgfactory)
     print package1.keys()
@@ -102,24 +102,23 @@ def test_nodewriter():
 
     # Package
     metainfo = {'version': '0.0.1',
-               'license': 'CECILL-C',
-               'authors': 'OpenAlea Consortium',
-               'institutes': 'INRIA/CIRAD',
-               'description': 'Base library.',
-               'url': 'http://openalea.gforge.inria.fr'}
+                'license': 'CECILL-C',
+                'authors': 'OpenAlea Consortium',
+                'institutes': 'INRIA/CIRAD',
+                'description': 'Base library.',
+                'url': 'http://openalea.gforge.inria.fr'}
 
-    package1 = pm.create_user_package("MyTestPackage", \
-        metainfo, os.path.curdir)
-    assert package1 != None
+    package1 = pm.create_user_package("MyTestPackage",
+                                      metainfo, os.path.curdir)
+    assert package1 is not None
 
     nf = package1.create_user_node(name="mynode",
-                                      category='test',
-                                      description="descr",
-                                      inputs=(),
-                                      outputs=(),
-                                      )
+                                   category='test',
+                                   description="descr",
+                                   inputs=(),
+                                   outputs=(),
+                                   )
     package1.write()
     pm.init()
     newsg = pm.get_node('MyTestPackage', 'mynode')
     package1.remove_files()
-
