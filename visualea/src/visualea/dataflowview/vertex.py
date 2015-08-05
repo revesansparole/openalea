@@ -22,7 +22,8 @@ import sip
 from openalea.vpltk.qt import qt
 from openalea.visualea.graph_operator import GraphOperator
 from openalea.core import observer, compositenode
-from openalea.core.node import InputPort, OutputPort, AbstractPort, AbstractNode
+from openalea.core.node import AbstractNode
+from openalea.core.node_port import InputPort, OutputPort, AbstractPort
 from openalea.core.settings import Settings
 from openalea.grapheditor import qtgraphview, baselisteners, qtutils
 from openalea.grapheditor.qtutils import mixin_method, safeEffects

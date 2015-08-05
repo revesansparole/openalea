@@ -33,7 +33,7 @@ from openalea.core.algo.dataflow_evaluation import AbstractEvaluation
 from openalea.core import cli, logger
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.settings import Settings,NoSectionError,NoOptionError
-from openalea.core.node import NodeFactory
+from openalea.core.node_factory import NodeFactory
 from openalea.core.compositenode import CompositeNodeFactory
 
 from openalea.visualea.node_treeview import NodeFactoryView, NodeFactoryTreeView, PkgModel, CategoryModel

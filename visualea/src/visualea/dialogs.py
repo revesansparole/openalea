@@ -28,7 +28,8 @@ from openalea.core.pkgmanager import PackageManager
 from openalea.core.settings import Settings, get_userpkg_dir
 from openalea.core.interface import *
 from openalea.core.session import Session
-from openalea.core.node import Factory, Node
+from openalea.core.node import Node
+from openalea.core.node_factory import Factory
 
 import ui_newgraph
 import ui_tofactory

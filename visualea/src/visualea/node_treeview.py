@@ -28,7 +28,7 @@ from weakref import ref
 
 from openalea.vpltk.qt import qt
 
-from openalea.core.node import NodeFactory, AbstractFactory
+from openalea.core.node_factory import NodeFactory, AbstractFactory
 from openalea.core.data import DataFactory
 from openalea.core.package import Package, UserPackage
 from openalea.core.compositenode import CompositeNodeFactory
