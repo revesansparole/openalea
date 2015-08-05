@@ -3,13 +3,19 @@ import operator
 
 from openalea.core.dataflow import DataFlow
 from openalea.core.dataflow_state import DataflowState
-from openalea.core.dataflow_evaluation import (AbstractEvaluation,
+from openalea.core.dataflow_evaluation import (EvaluationError,
+                                               AbstractEvaluation,
                                                BruteEvaluation,
                                                LazyEvaluation)
-from openalea.core.node import Node, FuncNode
+from openalea.core.node import Node, FuncNodeRaw, FuncNodeSingle
 
 
 def print_func(*args):
+    print "print_func", args
+    return args,
+
+
+def display_func(*args):
     print "print_func", args
 
 
@@ -42,10 +48,10 @@ def get_dataflow():
     df.connect(pid21, pid32)
     df.connect(pid33, pid41)
 
-    df.set_actor(vid1, FuncNode({}, {}, int))
-    df.set_actor(vid2, FuncNode({}, {}, fixed_function))
-    df.set_actor(vid3, FuncNode({}, {}, operator.add))
-    df.set_actor(vid4, FuncNode({}, {}, print_func))
+    df.set_actor(vid1, FuncNodeSingle({}, {}, int))
+    df.set_actor(vid2, FuncNodeSingle({}, {}, fixed_function))
+    df.set_actor(vid3, FuncNodeSingle({}, {}, operator.add))
+    df.set_actor(vid4, FuncNodeRaw({}, {}, print_func))
 
     return df, (pid10, pid42)
 
@@ -68,7 +74,7 @@ def test_dataflow_evaluation_eval_init():
 
     env = None
     dfs = DataflowState(df)
-    assert_raises(UserWarning, lambda: algo.eval(env, dfs))
+    assert_raises(EvaluationError, lambda: algo.eval(env, dfs))
 
 
 def test_dataflow_evaluation_eval():
@@ -107,8 +113,8 @@ def test_dataflow_evaluation_eval_no_vid2():
     pid1 = df.add_in_port(vid1, "in")
     df.add_out_port(vid1, "out")
 
-    df.set_actor(vid0, FuncNode({}, {}, int))
-    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.set_actor(vid0, FuncNodeSingle({}, {}, int))
+    df.set_actor(vid1, FuncNodeSingle({}, {}, int))
 
     dfs = DataflowState(df)
     env = None
@@ -129,7 +135,7 @@ def test_dataflow_evaluation_single_input_single_output():
     pid1 = df.add_in_port(vid, "in2")
     pid2 = df.add_out_port(vid, "out")
 
-    df.set_actor(vid, FuncNode({}, {}, operator.add))
+    df.set_actor(vid, FuncNodeSingle({}, {}, operator.add))
 
     dfs = DataflowState(df)
     env = None
@@ -149,7 +155,7 @@ def test_dataflow_evaluation_single_input_no_output():
     vid = df.add_vertex()
     pid0 = df.add_in_port(vid, "in")
 
-    df.set_actor(vid, FuncNode({}, {}, print_func))
+    df.set_actor(vid, FuncNodeRaw({}, {}, display_func))
 
     dfs = DataflowState(df)
     env = None
@@ -160,11 +166,11 @@ def test_dataflow_evaluation_single_input_no_output():
 
     assert dfs.get_data(pid0) == 1
 
-    df.set_actor(vid, FuncNode({}, {}, int))
+    df.set_actor(vid, FuncNodeSingle({}, {}, int))
     dfs.reinit()
     algo.clear()
 
-    assert_raises(UserWarning, lambda: algo.eval(env, dfs, vid))
+    assert_raises(EvaluationError, lambda: algo.eval(env, dfs, vid))
 
 
 def test_dataflow_evaluation_no_input_two_outputs():
@@ -172,15 +178,13 @@ def test_dataflow_evaluation_no_input_two_outputs():
     vid = df.add_vertex()
     pid0 = df.add_out_port(vid, "out1")
 
-    df.set_actor(vid, FuncNode({}, {}, double_fixed_function))
+    df.set_actor(vid, FuncNodeRaw({}, {}, double_fixed_function))
 
     dfs = DataflowState(df)
     env = None
     algo = BruteEvaluation(df)
 
-    algo.eval(env, dfs, vid)
-
-    assert tuple(dfs.get_data(pid0)) == (5, 5)
+    assert_raises(EvaluationError, lambda: algo.eval(env, dfs, vid))
 
     algo.clear()
     dfs.reinit()
@@ -192,7 +196,7 @@ def test_dataflow_evaluation_no_input_two_outputs():
     algo.clear()
     dfs.reinit()
     df.add_out_port(vid, "out3")
-    assert_raises(UserWarning, lambda: algo.eval(env, dfs, vid))
+    assert_raises(EvaluationError, lambda: algo.eval(env, dfs, vid))
 
 
 def test_dataflow_evaluation_multiple_runs():
@@ -208,6 +212,146 @@ def test_dataflow_evaluation_multiple_runs():
         algo.clear()
         algo.eval(None, dfs)
         assert dfs.is_valid()
+
+
+def f_none():
+    return None
+
+
+def f_none_tup():
+    return None,
+
+
+def f1():
+    return 1
+
+
+def f1_tup():
+    return 1,
+
+
+def ftup():
+    return 1, 2
+
+
+def test_dataflow_evaluation_dispatch_return_values():
+    ###########################
+    #
+    # no output
+    #
+    ###########################
+    df = DataFlow()
+    vid = df.add_vertex()
+
+    algo = BruteEvaluation(df)
+    dfs = DataflowState(df)
+
+    # return single value
+    df.set_actor(vid, FuncNodeRaw({}, {}, f_none))
+    algo.clear()
+    dfs.reinit()
+    algo.eval(None, dfs)
+
+    for func in [f_none_tup, f1, f1_tup, ftup]:
+        df.set_actor(vid, FuncNodeRaw({}, {}, func))
+        algo.clear()
+        dfs.reinit()
+
+        assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
+
+    ###########################
+    #
+    # single output
+    #
+    ###########################
+    df = DataFlow()
+    vid = df.add_vertex()
+    pid = df.add_out_port(vid, "out")
+
+    algo = BruteEvaluation(df)
+    dfs = DataflowState(df)
+
+    # return single value
+    for func in [f_none, f1]:
+        df.set_actor(vid, FuncNodeRaw({}, {}, func))
+        algo.clear()
+        dfs.reinit()
+        assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
+
+    df.set_actor(vid, FuncNodeSingle({}, {}, f_none))
+    algo.clear()
+    dfs.reinit()
+    algo.eval(None, dfs)
+
+    assert dfs.get_data(pid) is None
+
+    df.set_actor(vid, FuncNodeSingle({}, {}, f1))
+    algo.clear()
+    dfs.reinit()
+    algo.eval(None, dfs)
+
+    assert dfs.get_data(pid) == 1
+
+    # return tuple
+    df.set_actor(vid, FuncNodeRaw({}, {}, f_none_tup))
+    algo.clear()
+    dfs.reinit()
+    algo.eval(None, dfs)
+
+    assert dfs.get_data(pid) is None
+
+    df.set_actor(vid, FuncNodeRaw({}, {}, f1_tup))
+    algo.clear()
+    dfs.reinit()
+    algo.eval(None, dfs)
+
+    assert dfs.get_data(pid) == 1
+
+    df.set_actor(vid, FuncNodeSingle({}, {}, ftup))
+    algo.clear()
+    dfs.reinit()
+    algo.eval(None, dfs)
+
+    assert dfs.get_data(pid) == (1, 2)
+
+    df.set_actor(vid, FuncNodeRaw({}, {}, ftup))
+    algo.clear()
+    dfs.reinit()
+    assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
+
+    ###########################
+    #
+    # multiple outputs
+    #
+    ###########################
+    df = DataFlow()
+    vid = df.add_vertex()
+    pid1 = df.add_out_port(vid, "out1")
+    pid2 = df.add_out_port(vid, "out2")
+
+    algo = BruteEvaluation(df)
+    dfs = DataflowState(df)
+
+    # return single value
+    for func in [f_none, f_none_tup, f1, f1_tup]:
+        df.set_actor(vid, FuncNodeRaw({}, {}, func))
+        algo.clear()
+        dfs.reinit()
+        assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
+
+    # return two values
+    df.set_actor(vid, FuncNodeRaw({}, {}, ftup))
+    algo.clear()
+    dfs.reinit()
+    algo.eval(None, dfs)
+
+    assert dfs.get_data(pid1) == 1
+    assert dfs.get_data(pid2) == 2
+
+    df.set_actor(vid, FuncNodeSingle({}, {}, ftup))
+    algo.clear()
+    dfs.reinit()
+    assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
 
 
 def test_dataflow_evaluation_lazy():
@@ -229,7 +373,7 @@ def test_df_eval_lazy_single_node_lazy():
     vid = df.add_vertex()
     pid0 = df.add_in_port(vid, "in")
     pid1 = df.add_out_port(vid, "out")
-    df.set_actor(vid, FuncNode({}, {}, int))
+    df.set_actor(vid, FuncNodeSingle({}, {}, int))
 
     algo = LazyEvaluation(df)
     dfs = DataflowState(df)
@@ -269,7 +413,7 @@ def test_df_eval_lazy_single_node_non_lazy():
     vid = df.add_vertex()
     pid0 = df.add_in_port(vid, "in")
     pid1 = df.add_out_port(vid, "out")
-    df.set_actor(vid, FuncNode({}, {}, int))
+    df.set_actor(vid, FuncNodeSingle({}, {}, int))
     df.actor(vid).set_lazy(False)
 
     algo = LazyEvaluation(df)
@@ -311,7 +455,7 @@ def test_df_eval_lazy_single_node_lazy_no_inports():
     df = DataFlow()
     vid = df.add_vertex()
     pid = df.add_out_port(vid, "out")
-    df.set_actor(vid, FuncNode({}, {}, fixed_function))
+    df.set_actor(vid, FuncNodeSingle({}, {}, fixed_function))
 
     algo = LazyEvaluation(df)
     dfs = DataflowState(df)
@@ -347,7 +491,7 @@ def test_df_eval_lazy_single_node_non_lazy_no_inports():
     df = DataFlow()
     vid = df.add_vertex()
     pid = df.add_out_port(vid, "out")
-    df.set_actor(vid, FuncNode({}, {}, fixed_function))
+    df.set_actor(vid, FuncNodeSingle({}, {}, fixed_function))
     df.actor(vid).set_lazy(False)
 
     algo = LazyEvaluation(df)
@@ -386,11 +530,11 @@ def test_df_eval_lazy_two_nodes_lazy():
     vid0 = df.add_vertex()
     pid0 = df.add_in_port(vid0, "in")
     pid1 = df.add_out_port(vid0, "out")
-    df.set_actor(vid0, FuncNode({}, {}, int))
+    df.set_actor(vid0, FuncNodeSingle({}, {}, int))
     vid1 = df.add_vertex()
     pid2 = df.add_in_port(vid1, "in")
     pid3 = df.add_out_port(vid1, "out")
-    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.set_actor(vid1, FuncNodeSingle({}, {}, int))
     df.connect(pid1, pid2)
 
     algo = LazyEvaluation(df)
@@ -443,11 +587,11 @@ def test_df_eval_lazy_two_nodes_up_nonlazy():
     vid0 = df.add_vertex()
     pid0 = df.add_in_port(vid0, "in")
     pid1 = df.add_out_port(vid0, "out")
-    df.set_actor(vid0, FuncNode({}, {}, int))
+    df.set_actor(vid0, FuncNodeSingle({}, {}, int))
     vid1 = df.add_vertex()
     pid2 = df.add_in_port(vid1, "in")
     pid3 = df.add_out_port(vid1, "out")
-    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.set_actor(vid1, FuncNodeSingle({}, {}, int))
     df.connect(pid1, pid2)
     df.actor(vid0).set_lazy(False)
 
@@ -505,11 +649,11 @@ def test_df_eval_lazy_two_nodes_down_nonlazy():
     vid0 = df.add_vertex()
     pid0 = df.add_in_port(vid0, "in")
     pid1 = df.add_out_port(vid0, "out")
-    df.set_actor(vid0, FuncNode({}, {}, int))
+    df.set_actor(vid0, FuncNodeSingle({}, {}, int))
     vid1 = df.add_vertex()
     pid2 = df.add_in_port(vid1, "in")
     pid3 = df.add_out_port(vid1, "out")
-    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.set_actor(vid1, FuncNodeSingle({}, {}, int))
     df.connect(pid1, pid2)
     df.actor(vid1).set_lazy(False)
 

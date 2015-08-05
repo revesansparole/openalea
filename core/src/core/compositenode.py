@@ -27,6 +27,10 @@ import string
 import pprint
 import copy
 
+from openalea.core.dataflow_evaluation import LazyEvaluation
+from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
+from openalea.core.dataflow_state import DataflowState
+
 from openalea.core.node import RecursionError, Node
 from openalea.core.node_factory import AbstractFactory
 from openalea.core.node_port import AbstractPort
@@ -529,7 +533,32 @@ class CompositeNode(Node, DataFlow):
 
         try:
             self.evaluating = True
-            algo.eval(vtx_id,step=step)
+            # TODO: HACK to switch to new eval algo
+            if isinstance(algo, LazyEvaluation):
+                print "hack EVAL"
+                # create new state
+                state = DataflowState(self)
+
+                # fill lonely input ports
+                for pid in self.in_ports():
+                    if self.nb_connections(pid) == 0:
+                        node = self.actor(self.vertex(pid))
+                        lpid = self.local_id(pid)
+                        val = node.inputs[lpid]
+                        state.set_data(pid, val)
+
+                #perform evaluation
+                env = EvaluationEnvironment()
+                algo.eval(env, state, vtx_id)
+
+                #copy data back in nodes
+                for pid in self.out_ports():
+                    node = self.actor(self.vertex(pid))
+                    lpid = self.local_id(pid)
+                    val = state.get_data(pid)
+                    node.set_output(lpid, val)
+            else :
+                algo.eval(vtx_id,step=step)
         finally:
             self.evaluating = False
         t1 = time.time()

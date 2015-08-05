@@ -20,6 +20,12 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 
+from openalea.core.node import FuncNodeRaw, FuncNodeSingle
+
+
+class EvaluationError(Exception):
+    pass
+
 # class EvaluationException(Exception):
 #
 #     def __init__(self, vid, node, exception, exc_info):
@@ -83,7 +89,7 @@ class BruteEvaluation(AbstractEvaluation):
 
     def eval(self, env, state, vid=None):
         if not state.is_ready_for_evaluation():
-            raise UserWarning("state not ready for evaluation")
+            raise EvaluationError("state not ready for evaluation")
 
         if vid is None:  # start evaluation from leaves in the dataflow
             df = self._dataflow
@@ -142,18 +148,35 @@ class BruteEvaluation(AbstractEvaluation):
 
         # affect return values to output ports
         pids = tuple(df.out_ports(vid))
+        # TODO: hack to insert this in visualea, to remove
+        node = df.actor(vid)
+        if isinstance(node, (FuncNodeRaw, FuncNodeSingle)):
+            # perfect do nothing
+            pass
+        else:
+            if len(pids) == 1:
+                try:
+                    if len(vals) == 1:
+                        pass
+                except TypeError:
+                    vals = [vals]
+
+
         if len(pids) == 0:
             if vals is not None:
-                msg = "mismatch nb out port vs. function result"
-                raise UserWarning(msg)
-        elif len(pids) == 1:
-            pid, = pids
-            state.set_data(pid, vals)
-        elif len(pids) == len(vals):
-            for pid, val in zip(pids, vals):
-                state.set_data(pid, val)
+                msg = "function return value but node has no outport"
+                raise EvaluationError(msg)
         else:
-            raise UserWarning("mismatch nb out port vs. function result")
+            try:
+                if len(pids) == len(vals):
+                    for pid, val in zip(pids, vals):
+                        state.set_data(pid, val)
+                else:
+                    msg = "mismatch nb out port vs. function result"
+                    raise EvaluationError(msg)
+            except TypeError:
+                msg = "Function needs to return a list of values"
+                raise EvaluationError(msg)
 
 
 class LazyEvaluation(BruteEvaluation):

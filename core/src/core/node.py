@@ -793,6 +793,18 @@ class FuncNode(Node):
         get_process_obj)  # TODO: duplication, another reason not to use properties
 
 
+class FuncNodeRaw(FuncNode):
+    def __call__(self, inputs=()):
+        if self.func is not None:
+            return self.func(*inputs)
+
+
+class FuncNodeSingle(FuncNode):
+    def __call__(self, inputs=()):
+        if self.func is not None:
+            return self.func(*inputs),
+
+
 def initialise_standard_metadata():
     """Declares the standard keys used by the Node structures.
     Called at the end of this file

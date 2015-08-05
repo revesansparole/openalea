@@ -145,7 +145,9 @@ def provenance(vid, node, start_time, end_time):
 # This variable has to be retrieve by the settings
 quantify = False
 
-__evaluators__ = []
+from openalea.core.dataflow_evaluation import LazyEvaluation
+
+__evaluators__ = ["LazyEvaluation"]
 
 class EvaluationException(Exception):
 
