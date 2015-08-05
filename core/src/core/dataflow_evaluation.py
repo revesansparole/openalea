@@ -20,9 +20,6 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 
-from openalea.core.node import FuncNodeRaw, FuncNodeSingle
-
-
 class EvaluationError(Exception):
     pass
 
@@ -94,6 +91,12 @@ class BruteEvaluation(AbstractEvaluation):
         if vid is None:  # start evaluation from leaves in the dataflow
             df = self._dataflow
             leaves = [vid for vid in df.vertices() if df.nb_out_edges(vid) == 0]
+            # TODO: Hack remove CompositeNodeInput and CompositeNodeInput
+            from openalea.core.compositenode import (CompositeNodeInput,
+                                                     CompositeNodeOutput)
+            leaves = [vid for vid in leaves
+                      if not isinstance(df.actor(vid), (CompositeNodeInput,
+                                                        CompositeNodeOutput))]
             # TODO: sort leaves
             for vid in leaves:
                 if vid not in self._evaluated:
@@ -149,6 +152,7 @@ class BruteEvaluation(AbstractEvaluation):
         # affect return values to output ports
         pids = tuple(df.out_ports(vid))
         # TODO: hack to insert this in visualea, to remove
+        from openalea.core.node import FuncNodeRaw, FuncNodeSingle
         node = df.actor(vid)
         if isinstance(node, (FuncNodeRaw, FuncNodeSingle)):
             # perfect do nothing

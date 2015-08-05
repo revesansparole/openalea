@@ -27,7 +27,7 @@ import string
 import pprint
 import copy
 
-from openalea.core.dataflow_evaluation import LazyEvaluation
+from openalea.core.dataflow_evaluation import BruteEvaluation, LazyEvaluation
 from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
 from openalea.core.dataflow_state import DataflowState
 
@@ -534,7 +534,7 @@ class CompositeNode(Node, DataFlow):
         try:
             self.evaluating = True
             # TODO: HACK to switch to new eval algo
-            if isinstance(algo, LazyEvaluation):
+            if isinstance(algo, (BruteEvaluation, LazyEvaluation)):
                 print "hack EVAL"
                 # create new state
                 state = DataflowState(self)
