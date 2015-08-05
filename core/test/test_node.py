@@ -36,10 +36,6 @@ class MyNode(Node):
         return sum(inputs)
 
 
-def MyFunc(a, b):
-    return a + b
-
-
 def test_node():
     """ Test Node creation"""
     inputs = (dict(name='x', interface=None, value=None),)
@@ -83,7 +79,7 @@ def test_node_output():
     assert n2.get_nb_input() == 1
     assert n2.get_nb_output() == 1
 
-    # Test IO and acess by key or index
+    # Test IO and access by key or index
     n1.eval()
     n2.eval()
     assert n1.get_output('y') == 1

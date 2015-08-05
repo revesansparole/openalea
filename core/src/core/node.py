@@ -101,10 +101,10 @@ class AbstractNode(Observed, HasAdHoc):
         """
         return self.__id
 
-    def set_id(self, id):
+    def set_id(self, node_id):
         """ Set id of the node.
         """
-        self.__id = id
+        self.__id = node_id
         self.internal_data["id"] = self.__id  # TODO: remove duplication
 
     def _init_internal_data(self, d):
@@ -176,22 +176,22 @@ class Node(AbstractNode):
 
     @staticmethod
     def is_deprecated_event(event):
-        evLen = len(event)
-        conversionTxt = None
-        retEvent = event
-        if evLen == 2:
+        ev_len = len(event)
+        conversion_txt = None
+        ret_event = event
+        if ev_len == 2:
             if event[0] == "caption_modified":
-                retEvent = "data_modified", "caption", event[1]
-                conversionTxt = "('data_modified', 'caption', caption)"
-        elif evLen == 3:
+                ret_event = "data_modified", "caption", event[1]
+                conversion_txt = "('data_modified', 'caption', caption)"
+        elif ev_len == 3:
             if event[0] == "data_modified":
                 if event[1] == "delay":
-                    retEvent = "internal_state_changed", "delay", event[2]
-                    conversionTxt = "('internal_state_changed', 'delay', delay)"
+                    ret_event = "internal_state_changed", "delay", event[2]
+                    conversion_txt = "('internal_state_changed', 'delay', delay)"
             elif event[0] == "internal_data_changed":
-                retEvent = ('internal_state_changed', event[1], event[2])
-                conversionTxt = "('internal_state_changed', 'key', value)"
-        return conversionTxt, retEvent
+                ret_event = ('internal_state_changed', event[1], event[2])
+                conversion_txt = "('internal_state_changed', 'key', value)"
+        return conversion_txt, ret_event
 
     def __init__(self, inputs=(), outputs=()):
         """ Constructor
@@ -424,8 +424,6 @@ class Node(AbstractNode):
         s = self.input_desc[index].is_hidden()  # get('hide', False)
         changed = self.internal_data["port_hide_changed"]  # TODO: WTF!
 
-        c = index in changed
-
         if index in changed:
             return not s
         else:
@@ -463,7 +461,7 @@ class Node(AbstractNode):
         """
         self.modified = True
         index = self.map_index_in[index_key]
-        if (notify):
+        if notify:
             self.notify_listeners(("input_modified", index))
             self.continuous_eval.notify_listeners(("node_modified",))
 
@@ -500,7 +498,7 @@ class Node(AbstractNode):
         interface = kargs.get('interface', None)
 
         # default value
-        if interface is not None and not kargs.has_key('value'):
+        if interface is not None and 'value' not in kargs:
             if isinstance(interface, str):
                 # Create mapping between interface name and interface class
                 from openalea.core.interface import TypeNameInterfaceMap
@@ -561,14 +559,14 @@ class Node(AbstractNode):
         index = self.map_index_in[key]
 
         changed = True
-        if (self.lazy):
+        if self.lazy:
             # Test if the inputs has changed
             try:
                 changed = (cmp(self.inputs[index], val) != 0)
             except:
                 pass
 
-        if (changed):
+        if changed:
             self.inputs[index] = val
             self.unvalidate_input(index, notify)
 
@@ -681,7 +679,7 @@ class Node(AbstractNode):
         for i in range(self.get_nb_output()):
             try:
                 outputs[i] = copy(self.outputs[i])
-            except:
+            except:  # TODO: GRUUIK
                 outputs[i] = None
         odict['outputs'] = outputs
 
@@ -711,8 +709,8 @@ class Node(AbstractNode):
 
         return odict
 
-    def __setstate__(self, dict):
-        self.__dict__.update(dict)
+    def __setstate__(self, state):
+        self.__dict__.update(state)
 
         for port in self.input_desc:
             port.vertex = ref(self)
@@ -729,7 +727,7 @@ class Node(AbstractNode):
             # if(not connected or self.input_states[i] is "connected"):
             self.set_input(i, self.input_desc[i].get('value', None))
 
-        if (i > 0):
+        if i > 0:
             self.invalidate()
 
     def reset(self):  # TODO: remove, data are not to be stored in the node
@@ -739,7 +737,7 @@ class Node(AbstractNode):
 
         i = self.get_nb_input()
 
-        if (i > 0):
+        if i > 0:
             self.invalidate()
 
     def invalidate(self):  # TODO: remove, evaluation algorithm instead
@@ -796,7 +794,9 @@ class FuncNode(Node):
 
 
 def initialise_standard_metadata():
-    """Declares the standard keys used by the Node structures. Called at the end of this file"""
+    """Declares the standard keys used by the Node structures.
+    Called at the end of this file
+    """
     # we declare what are the node model ad hoc data we require:
     AbstractNode.extend_ad_hoc_slots("position", list, [0, 0], "posx", "posy")
     Node.extend_ad_hoc_slots("userColor", list, None, "user_color")

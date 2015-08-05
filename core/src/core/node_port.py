@@ -54,8 +54,8 @@ class AbstractPort(dict, Observed, HasAdHoc):
     def get_id(self):
         return self.__id
 
-    def set_id(self, id):
-        self.__id = id
+    def set_id(self, pid):
+        self.__id = pid
 
     def get_desc(self):
         """ Get default description.

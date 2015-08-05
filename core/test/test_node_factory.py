@@ -3,13 +3,23 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
+from openalea.core.node import Node
 from openalea.core.node_factory import Factory
+
+
+class MyNode(Node):
+    def __call__(self, inputs):
+        return sum(inputs)
+
+
+def my_func(a, b):
+    return a + b
 
 
 def test_factory():
     """test factory"""
     f1 = Factory(name="MyFactory",
-                 nodemodule="test_node",
+                 nodemodule="test_node_factory",
                  nodeclass="MyNode",
                  )
 
@@ -18,15 +28,15 @@ def test_factory():
     assert n.get_nb_input() == 0
 
     f2 = Factory(name="MyFactory2",
-                 nodemodule="test_node",
-                 nodeclass="MyFunc",
+                 nodemodule="test_node_factory",
+                 nodeclass="my_func",
                  )
 
     n = f2.instantiate()
     assert n.get_nb_input() == 2
 
     f1IO = Factory(name="MyFactory",
-                   nodemodule="test_node",
+                   nodemodule="test_node_factory",
                    nodeclass="MyNode",
                    inputs=(dict(name="x", interface=None),
                            dict(name="y", interface=None),
@@ -37,8 +47,8 @@ def test_factory():
     assert n.get_nb_input() == 3
 
     f2IO = Factory(name="MyFactory2",
-                   nodemodule="test_node",
-                   nodeclass="MyFunc",
+                   nodemodule="test_node_factory",
+                   nodeclass="my_func",
                    inputs=(dict(name="x", interface=None),
                            dict(name="y", interface=None)),
                    outputs=(dict(name="z", interface=None),), )
