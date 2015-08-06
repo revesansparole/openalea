@@ -6,6 +6,7 @@
 #
 #       File author(s): Samuel Dufour-Kowalski <samuel.dufour@sophia.inria.fr>
 #                       Christophe Pradal <christophe.prada@cirad.fr>
+#                       Jerome Chopard <revesansparole@gmail.com>
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
@@ -16,7 +17,7 @@
 ###############################################################################
 """ This module defines Package classes.
 
-A Package is a deplyment unit and contains a factories (Node generator)
+A Package is a deployment unit and contains factories (Node generator)
 and meta informations (authors, license, doc...)
 """
 
@@ -41,11 +42,10 @@ from openalea.core.vlab import vlab_object
 
 # Exceptions
 
-
 class UnknownNodeError(Exception):
     def __init__(self, name):
         Exception.__init__(self)
-        self.message = "Cannot find node : %s" % (name)
+        self.message = "Cannot find node : %s" % name
 
     def __str__(self):
         return self.message
@@ -55,38 +55,32 @@ class FactoryExistsError(Exception):
     pass
 
 
-###############################################################################
 class DynamicPackage(PackageDict):
     """
     Package for dynamical parsing of python file
     """
 
     def __init__(self, name, metainfo):
+        PackageDict.__init__(self)
         self.metainfo = metainfo
         self.name = name
-        PackageDict.__init__(self)
 
 
 class Package(PackageDict):
     """
-    A Package is a dictionnary of node factory.
+    A Package is a dictionary of node factory.
     Each node factory is able to generate node and their widgets.
 
-    Meta informations are associated with a package.
+    Meta information are associated with a package.
     """
 
     # type information for drag and drop.
     mimetype = "openalea/package"
 
     def __init__(self, name, metainfo, path=None):
-        """
-        Create a Package
+        """ Create a Package.
 
-        :param name: a unique string used as a unique identifier for the package
-        :param path: path where the package lies (a directory or a full wralea path)
-        :param metainfo: a dictionnary for metainformation.
-
-        Attended keys for the metainfo parameters are:
+        Attended keys for the metainfo are:
             - license: a string ex GPL, LGPL, Cecill, Cecill-C
             - version: a string
             - authors: a string
@@ -95,8 +89,12 @@ class Package(PackageDict):
             - description: a string for the package description
             - publication: optional string for publications
 
+        args:
+            - name (str): used as a unique identifier for the package
+            - metainfo (dict):
+            - path (str): path where the package lies: either a directory
+                          or a full wralea path
         """
-
         PackageDict.__init__(self)
 
         self.name = name
@@ -104,7 +102,7 @@ class Package(PackageDict):
 
         # package directory
 
-        if (not path):
+        if path is None:
             # package directory
             import inspect
             # get the path of the file which call this function
@@ -114,12 +112,11 @@ class Package(PackageDict):
 
         # wralea.py path is specified
         else:
-            if (not os.path.exists(path)):
+            if not os.path.exists(path):
                 os.mkdir(path)
-            if (not os.path.isdir(path)):
+            if not os.path.isdir(path):
                 self.path = os.path.dirname(path)
                 self.wralea_path = path
-
             else:
                 self.path = path
                 self.wralea_path = os.path.join(self.path, "__wralea__.py")
@@ -131,7 +128,8 @@ class Package(PackageDict):
         New style package.
         A package is embeded in a unique directory.
         This directory can not contain more than one package.
-        Thus, you can move, copy or delete a package by acting on the directory without ambiguity.
+        Thus, you can move, copy or delete a package by acting
+        on the directory without ambiguity.
 
         Return True if the package is embeded in a directory.
         """
@@ -139,7 +137,8 @@ class Package(PackageDict):
 
     def is_editable(self):
         """
-        A convention (for the GUI) to ensure that the user can modify the package.
+        A convention (for the GUI) to ensure that the user
+        can modify the package.
         """
         return False
 
@@ -152,146 +151,187 @@ class Package(PackageDict):
         # assert self.is_directory()
 
         ret = []
-        for file in os.listdir(self.path):
-            src = os.path.join(self.path, file)
-            if (not os.path.isfile(src) or
-                    file.endswith(".pyc") or
-                    file.startswith(".")):
-                continue
-            ret.append(file)
+        for name in os.listdir(self.path):
+            src = os.path.join(self.path, name)
+            if (os.path.isfile(src) and
+                    not name.endswith(".pyc") and
+                    not name.startswith(".")):
+                ret.append(name)
+
+            # if (not os.path.isfile(src) or
+            #         name.endswith(".pyc") or
+            #         name.startswith(".")):
+            #     continue
+            # ret.append(name)
 
         return ret
 
     def remove_files(self):
         """ Remove pkg files """
-        assert False
+        raise NotImplementedError()
 
     def reload(self):
-        """ Reload all python file of the package """
-
+        """ Reload all python files of the package.
+        """
         sources = self.get_pkg_files()
 
         s = set()  # set of full path name
         for f in sources:
-            if (f.endswith('.py')):
+            if f.endswith('.py'):
                 f += 'c'
 
             s.add(os.path.abspath(os.path.join(self.path, f)))
 
         for module in sys.modules.values():
-            if (not module):
-                continue
-            try:
+            if module is not None:
+                # try:
                 modulefile = os.path.abspath(module.__file__)
-                if (modulefile in s):
+                if modulefile in s:
                     module.oa_invalidate = True
                     reload(module)
                     print "Reloaded ", module.__name__
-            except:
-                pass
+                # except:
+                #     pass
 
     def get_wralea_path(self):
-        """ Return the full path of the wralea.py (if set) """
+        """ Return the full path of the wralea.py.
+
+         Path must have been set before.
+         """
         return self.wralea_path
 
     def get_id(self):
-        """ Return the package id """
+        """ Return the package id.
+        """
         return self.name
 
     def get_tip(self):
-        """ Return the package description """
+        """ Return the package description.
+        """
 
-        str = "<b>Package:</b>%s<br/>\n" % (self.name,)
+        txt = "<b>Package:</b>%s<br/>\n" % (self.name,)
         try:
-            str += "<b>Description : </b>%s<br/>\n" % (
-            self.metainfo['description'].replace('\n', '<br/>'),)
-        except:
+            txt += "<b>Description : </b>%s<br/>\n" % (
+                self.metainfo['description'].replace('\n', '<br/>'),)
+        except KeyError:
             pass
         try:
-            str += "<b>Authors :</b> %s<br/>\n" % (self.metainfo['authors'],)
-        except:
+            txt += "<b>Authors :</b> %s<br/>\n" % (self.metainfo['authors'],)
+        except KeyError:
             pass
         try:
-            str += "<b>Institutes :</b> %s<br/>\n" % (
-            self.metainfo['institutes'],)
-        except:
-            pass
-
-        try:
-            str += "<b>URL : </b>%s<br/>\n" % (self.metainfo['url'],)
-        except:
+            txt += "<b>Institutes :</b> %s<br/>\n" % (
+                self.metainfo['institutes'],)
+        except KeyError:
             pass
 
-        return str
+        try:
+            txt += "<b>URL : </b>%s<br/>\n" % (self.metainfo['url'],)
+        except KeyError:
+            pass
+
+        return txt
 
     def get_metainfo(self, key):
-        """
-        Return a meta information.
+        """ Return a meta information.
+
         See the standard key in the __init__ function documentation.
 
-        :param key: todo
+        args:
+            - key (str)
+
+        return:
+            - value (any) associated with the key if it exists
+            - "" otherwise
         """
         return self.metainfo.get(key, "")
 
     def add_factory(self, factory):
-        """ Add to the package a factory ( node or subgraph ) """
+        """ Add a factory in the package.
 
-        if (factory.name in self):
-            raise Exception(
-                "Factory %s already defined. Ignored !" % (factory.name,))
+        args:
+            - factory (Factory)
+        """
+
+        if factory.name in self:
+            msg = "Factory %s already defined. Ignored !" % factory.name
+            raise KeyError(msg)
 
         self[factory.name] = factory
         factory.package = self
 
-        # Check validity
+        # Check validity  # TODO: GRUUIK
         # oops: this is a hack.
-        # When the factory is a data factory that do not reference a file, raise an error.
-        # This function return True or raise an error to have a specific diagnostic.
+        # When the factory is a data factory that do not reference a file
+        # raise an error.
+        # This function return True or raise an error to have a specific
+        # diagnostic.
         try:
             factory.is_valid()
-
         except Exception, e:
             factory.package = None
             del (self[factory.name])
             raise e
 
         # Add Aliases
-        if (factory.alias):
+        if factory.alias is not None:
             for a in factory.alias:
                 self[protect(a)] = factory
 
     def update_factory(self, old_name, factory):
-        """ Update factory (change its name) """
+        """ Change the name of a factory.
 
-        del (self[old_name])
+        args:
+            - old_name (str): name previously used by the factory
+            - factory (Factory): new factory to use instead
+        """
+        del self[old_name]
         self.add_factory(factory)
 
     def get_names(self):
-        """ Return all the factory names in a list """
+        """ Return all the factory registered in the package.
 
+        return:
+            - (list of str): list of factory names.
+        """
         return self.keys()
 
-    def get_factory(self, id):
-        """ Return the factory associated with id """
+    def get_factory(self, name):
+        """ Return the factory associated with a name.
+
+        args:
+            - name (str): unique identifier for a factory
+        """
 
         try:
-            factory = self[id]
+            return self[name]
         except KeyError:
-            raise UnknownNodeError("%s.%s" % (self.name, id))
-
-        return factory
-
-
-################################################################################
+            raise UnknownNodeError("%s.%s" % (self.name, name))
 
 
 class UserPackage(Package):
-    """ Package user editable and persistent """
+    """ Package user editable and persistent.
+    """
 
     def __init__(self, name, metainfo, path=None):
-        """ @param path : directory where to store wralea and module files """
+        """ Create a Package.
 
-        if (not path):
+        Attended keys for the metainfo are:
+            - license: a string ex GPL, LGPL, Cecill, Cecill-C
+            - version: a string
+            - authors: a string
+            - institutes: a string
+            - url: a string
+            - description: a string for the package description
+            - publication: optional string for publications
+
+        args:
+            - name (str): used as a unique identifier for the package
+            - metainfo (dict):
+            - path (str): path where the package lies: either a directory
+                          or a full wralea path
+        """
+        if path is None:
             import inspect
             # get the path of the file which call this function
             path = os.path.abspath(inspect.stack()[1][1])
@@ -302,27 +342,31 @@ class UserPackage(Package):
         return True
 
     def remove_files(self):
-        """ Remove pkg files """
+        """ Remove pkg files.
+        """
         assert self.is_directory()
 
         self.clear()
-        shutil.rmtree(self.path, ignore_errors=True)
+        shutil.rmtree(self.path, ignore_errors=True)  # TODO: GRUUIK
 
     def clone_from_package(self, pkg):
-        """ Copy the contents of pkg in self"""
+        """ Copy the contents of pkg in self.
 
+        args:
+            - pkg (Package): another package to copy
+        """
         assert self.is_directory()
 
         # Copy icon
-        if (not self.metainfo['icon']):
+        if 'icon' not in self.metainfo or self.metainfo['icon'] is None:
             self.metainfo['icon'] = pkg.metainfo['icon']
 
         # Copy files
         sources = pkg.get_pkg_files()
 
-        for file in sources:
-            src = os.path.join(pkg.path, file)
-            dst = os.path.join(self.path, file)
+        for name in sources:
+            src = os.path.join(pkg.path, name)
+            dst = os.path.join(self.path, name)
             shutil.copyfile(src, dst)
 
         # Copy deeply all the factory
@@ -335,10 +379,11 @@ class UserPackage(Package):
         self.write()
 
     def write(self):
-        """ Return the writer class """
-
+        """ Write the package into a wralea file.
+        """
         writer = PyPackageWriter(self)
-        if (not os.path.isdir(self.path)):
+
+        if not os.path.isdir(self.path):
             os.mkdir(self.path)
 
         print "Writing", self.wralea_path
@@ -348,11 +393,11 @@ class UserPackage(Package):
         # create a __init__.py if necessary
         init_path = os.path.join(self.path, '__init__.py')
 
-        if (not os.path.exists(init_path)):
+        if not os.path.exists(init_path):
             f = open(init_path, 'w')
             f.close()
 
-    # Convenience function
+    # Convenience function  # TODO: external file
 
     def create_user_node(self, name, category, description,
                          inputs, outputs):
@@ -363,7 +408,7 @@ class UserPackage(Package):
         and the package is saved.
         """
 
-        if (name in self):
+        if name in self:
             raise FactoryExistsError()
 
         localdir = self.path
@@ -398,9 +443,9 @@ class UserPackage(Package):
         if return_values:
             return_values = ', '.join(return_values) + ','
         # Create the module file
-        my_template = """\
+        my_template = """
 def %s(%s):
-    '''\
+    '''
     %s
     '''
     %s
@@ -410,11 +455,11 @@ def %s(%s):
     return %s
 """ % (classname, in_args, description, out_values, return_values)
 
-        module_path = os.path.join(localdir, "%s.py" % (classname))
+        module_path = os.path.join(localdir, "%s.py" % classname)
 
-        file = open(module_path, 'w')
-        file.write(my_template)
-        file.close()
+        f = open(module_path, 'w')
+        f.write(my_template)
+        f.close()
 
         from openalea.core.node_factory import NodeFactory
 
@@ -433,7 +478,7 @@ def %s(%s):
 
         return factory
 
-    # Convenience function
+    # Convenience function  # TODO: external file to avoid circular dependencies
     def create_user_compositenode(self, name, category, description,
                                   inputs, outputs):
         """
@@ -456,10 +501,14 @@ def %s(%s):
 
         return newfactory
 
-    def add_data_file(self, filename, description=''):
-        """
-        Add a file in a package
-        (copy it in the directory)
+    def add_data_file(self, filename, description=''):  # TODO: external file
+        """ Add a file in the package.
+
+        Copy file in the directory
+
+        args:
+            - filename (str): valid path of actual location of the data
+            - description (str): optional description of the data
         """
         from openalea.core.data import DataFactory
 
@@ -468,10 +517,10 @@ def %s(%s):
         dst = os.path.join(self.path, bname)
 
         try:
-            if (src != dst):
+            if src != dst:
                 shutil.copyfile(src, dst)
         except shutil.Error:
-            if not os.path.exists(dst):
+            if not os.path.exists(dst):  # TODO: GRUUIK
                 f = open(dst, 'w')
                 f.close()
 
@@ -483,42 +532,44 @@ def %s(%s):
         return newfactory
 
     def set_icon(self, filename):
-        """
-        Set package icon
-        Copy filename in the package dir
+        """ Set package icon
+
+        Copy filename in the package dir.
+
+        args:
+            - filename (str): valid current path of the icon.
         """
 
         bname = os.path.basename(filename)
         src = os.path.abspath(filename)
         dst = os.path.join(self.path, bname)
 
-        try:
-            if (src != dst):
-                shutil.copyfile(src, dst)
-            self.metainfo['icon'] = bname
-            self.write()
-        except IOError:
-            pass
+        # try:  # TODO: avoid try catch
+        if src != dst:
+            shutil.copyfile(src, dst)
+        self.metainfo['icon'] = bname
+        self.write()
+        # except IOError:
+        #     pass
 
-    def add_factory(self, factory):
-        """ Write change on disk """
+    # def add_factory(self, factory):
+    #     """ Write change on disk """
+    #
+    #     Package.add_factory(self, factory)
 
-        Package.add_factory(self, factory)
+    # def __delitem__(self, key):
+    #     """ Write change on disk """
+    #
+    #     Package.__delitem__(self, key)
+    #     # self.write()
 
-    def __delitem__(self, key):
-        """ Write change on disk """
-
-        Package.__delitem__(self, key)
-        # self.write()
-
-
-################################################################################
 
 class AbstractPackageReader(object):
-    """
-    Abstract class to add a package in the package manager.
-    """
+    """ Abstract class for package readers.
 
+    A package reader takes a stream, parse it into a
+    package description and add the package in the package manager.
+    """
     def __init__(self, filename):
         """
         Build a package from a specification file.
@@ -527,40 +578,39 @@ class AbstractPackageReader(object):
         self.filename = filename
 
     def register_packages(self, pkgmanager):
-        """ Create and add a package in the package manager. """
+        """ Create and add a package in the package manager.
+        """
         raise NotImplementedError()
 
 
 class PyPackageReader(AbstractPackageReader):
-    """
-    Build packages from wralea file
+    """ Build packages from wralea file.
+
     Use 'register_package' function
     """
 
     def filename_to_module(self, filename):
-        """ Transform the filename ending with .py to the module name """
+        """ Transform a filename ending with .py to the module name.
+        """
         start_index = 0
         end_index = len(filename)
 
         # delete the .py at the end
-        if (filename.endswith('.py')):
+        if filename.endswith('.py'):
             end_index = -3
         # Windows case (e.g. C:/...)
-        if (filename[1] == ':'):
+        if filename[1] == ':':
             start_index = 2
 
         modulename = filename[start_index:end_index]
 
-        l = modulename.split(os.path.sep)
-        modulename = '.'.join(l)
-
-        return modulename
+        return modulename.replace(os.path.sep, '.')
 
     def get_pkg_name(self):
-        """ Return the OpenAlea (uniq) full package name """
+        """ Return the OpenAlea (unique) full package name.
+        """
         m = self.filename_to_module(self.filename)
-        m = m.replace(".", "_")
-        return m
+        return m.replace(".", "_")
 
     def register_packages(self, pkgmanager):
         """ Execute Wralea.py """
@@ -576,26 +626,26 @@ class PyPackageReader(AbstractPackageReader):
         # Adapt sys.path
         sys.path.append(basedir)
 
-        if (modulename in sys.modules):
+        if modulename in sys.modules:
             del sys.modules[modulename]
 
-        (file, pathname, desc) = imp.find_module(base_modulename, [basedir])
-        try:
-            wraleamodule = imp.load_module(modulename, file, pathname, desc)
-            pkg = self.build_package(wraleamodule, pkgmanager)
+        f, pathname, desc = imp.find_module(base_modulename, [basedir])
+        # try:  # TODO: removed broad try
+        wraleamodule = imp.load_module(modulename, f, pathname, desc)
+        pkg = self.build_package(wraleamodule, pkgmanager)
 
-        except Exception, e:
-            try:
-                pkgmanager.log.add('%s is invalid : %s' % (self.filename, e))
-            except Exception, e:
-                print '%s is invalid : %s' % (self.filename, e)
-                pass
+        # except Exception, e:
+        #     try:
+        #         pkgmanager.log.add('%s is invalid : %s' % (self.filename, e))
+        #     except Exception, e:
+        #         print '%s is invalid : %s' % (self.filename, e)
+        #         pass
+        #
+        # except:  # Treat all exception
+        #     pkgmanager.add('%s is invalid :' % (self.filename,))
 
-        except:  # Treat all exception
-            pkgmanager.add('%s is invalid :' % (self.filename,))
-
-        if (file):
-            file.close()
+        if not f.closed:
+            f.close()
 
         # Recover sys.path
         sys.path.pop()
@@ -615,8 +665,8 @@ class PyPackageReader(AbstractPackageReader):
 
 
 class PyPackageReaderWralea(PyPackageReader):
-    """
-    Build a package from  a __wralea__.py
+    """ Build a package from  a __wralea__.py
+
     Use module variable
     """
 
@@ -638,33 +688,38 @@ class PyPackageReaderWralea(PyPackageReader):
             alias=[], )
 
         for k, v in wraleamodule.__dict__.iteritems():
+            if k.startswith('__') and k.endswith('__'):
+                k = k[2:-2]
 
-            if not (k.startswith('__') and k.endswith('__')):
-                continue
-            k = k[2:-2]  # remove __
-            if k not in metainfo:
-                continue
-            metainfo[k] = v
+                if k in metainfo:  # update value
+                    metainfo[k] = v
+
+            # if not (k.startswith('__') and k.endswith('__')):
+            #     continue
+            # k = k[2:-2]  # remove __
+            # if k not in metainfo:
+            #     continue
+            # metainfo[k] = v
 
         # Build Package
         path = wraleamodule.__file__
-        if (path.endswith('.pyc')):
+        if path.endswith('.pyc'):
             path = path.replace('.pyc', '.py')
 
-        if (not edit):
-            p = Package(name, metainfo, path)
-        else:
+        if edit:
             p = UserPackage(name, metainfo, path)
+        else:
+            p = Package(name, metainfo, path)
 
         # Add factories
         factories = wraleamodule.__dict__.get('__all__', [])
         for fname in factories:
             f = wraleamodule.__dict__.get(fname, None)
-            try:
-                if (f):
-                    p.add_factory(f)
-            except Exception, e:
-                pkgmanager.log.add(str(e))
+            # try:  # TODO: removed broad try
+            if f is not None:
+                p.add_factory(f)
+            # except Exception, e:
+            #     pkgmanager.log.add(str(e))
 
         pkgmanager.add_package(p)
 
@@ -673,18 +728,12 @@ class PyPackageReaderWralea(PyPackageReader):
         for name in palias:
             if protect(name) in pkgmanager:
                 alias_pkg = pkgmanager[protect(name)]
-                for name_factory, factory in p.iteritems():
-                    if (name_factory not in alias_pkg and
-                                (
-                                        alias_pkg.name + '.' + name_factory) not in pkgmanager):
-                        alias_pkg[name_factory] = factory
+                for fname, factory in p.iteritems():
+                    pkg_name = alias_pkg.name + '.' + fname
+                    if fname not in alias_pkg and pkg_name not in pkgmanager:
+                        alias_pkg[fname] = factory
             else:
                 pkgmanager[protect(name)] = p
-
-
-######################
-# Vlab package reader
-######################
 
 
 class PyPackageReaderVlab(AbstractPackageReader):
@@ -693,21 +742,20 @@ class PyPackageReaderVlab(AbstractPackageReader):
     """
 
     def register_packages(self, pkgmanager):
-        """ Create and add a package in the package manager. """
-        fn = _path(self.filename).abspath()
-        pkg_path = fn.dirname()
-
-        spec_file = fn.basename()
-        assert 'specification' in spec_file
-
-        vlab_package = vlab_object(pkg_path, pkgmanager)
-        pkg = vlab_package.get_package()
-        pkgmanager.add_package(pkg)
-
-
-############################## Writers #########################################
+        raise DeprecationWarning()
+        # """ Create and add a package in the package manager. """
+        # fn = _path(self.filename).abspath()
+        # pkg_path = fn.dirname()
+        #
+        # spec_file = fn.basename()
+        # assert 'specification' in spec_file
+        #
+        # vlab_package = vlab_object(pkg_path, pkgmanager)
+        # pkg = vlab_package.get_package()
+        # pkgmanager.add_package(pkg)
 
 
+# TODO
 class PyPackageWriter(object):
     """ Write a wralea python file """
 
@@ -742,7 +790,7 @@ $FACTORY_DECLARATION
         result_str = {}
         for f in self.package.values():
             writer = f.get_writer()
-            if (writer):
+            if writer:
                 name = f.get_python_name()
                 result_str[name] = str(writer)
 
@@ -753,7 +801,7 @@ $FACTORY_DECLARATION
 
         fdict = self.get_factories_str()
 
-        all = fdict.keys()
+        keys = fdict.keys()
 
         fstr = '\n'.join(fdict.values())
 
@@ -764,16 +812,16 @@ $FACTORY_DECLARATION
         metainfo = '__editable__ = %s\n' % (repr(editable))
 
         for (k, v) in self.package.metainfo.iteritems():
-            key = "__%s__" % (k)
+            key = "__%s__" % k
             val = repr(v)
             metainfo += "%s = %s\n" % (key, val)
 
         result = pstr.safe_substitute(
             PKGNAME="__name__ = %s" % (repr(self.package.name)),
             METAINFO=metainfo,
-            ALL="__all__ = %s" % (repr(all),),
+            ALL="__all__ = %s" % repr(keys),
             FACTORY_DECLARATION=fstr,
-            )
+        )
 
         return result
 

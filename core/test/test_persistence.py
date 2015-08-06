@@ -18,6 +18,7 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
+from nose.tools import with_setup
 import os
 import shutil
 
@@ -26,20 +27,20 @@ from openalea.core.compositenode import CompositeNodeFactory, CompositeNode
 from openalea.core.node_factory import Factory
 
 
-def setup_module():
-    try:  # TODO: GRUUIK
-        path = os.path.join(os.path.curdir, "MyTestPackage")
-        shutil.rmtree(path)
-
-    except:
-        pass
+def setup_func():
+    pass
 
 
+def teardown_func():
+    pth = "MyTestPackage"
+    if os.path.exists(pth):
+        shutil.rmtree(pth)
+
+
+@with_setup(setup_func, teardown_func)
 def test_compositenodewriter():
-    setup_module()
-
     pm = PackageManager()
-    pm.init()
+    pm.init("pkg")
 
     sg = CompositeNode(inputs=[dict(name="%d" % i) for i in xrange(3)],
                        outputs=[dict(name="%d" % i) for i in xrange(4)],
@@ -82,22 +83,28 @@ def test_compositenodewriter():
     print sg.node(val3id).get_output(0)
     assert sg.node(val3id).get_output(0) == 5.
 
-    print "nb vertices", len(sg)
     assert len(sg) == 6
 
-    pm.init()
+    pm.init("MyTestPackage")
     newsg = pm.get_node('MyTestPackage', 'addition')
-    print "nb vertices", len(newsg)
     assert len(newsg) == 6
 
 
+def setup_func2():
+    pass
+
+
+def teardown_func2():  # avoid collision with other tests
+    pth = "MyTestPackage2"
+    if os.path.exists(pth):
+        shutil.rmtree(pth)
+
+
+@with_setup(setup_func2, teardown_func2)
 def test_nodewriter():
     """test node writer"""
-    setup_module()
-
     pm = PackageManager()
-    pm.clear()
-    pm.init()
+    pm.init("pkg")
 
     # Package
     metainfo = {'version': '0.0.1',
@@ -107,7 +114,7 @@ def test_nodewriter():
                 'description': 'Base library.',
                 'url': 'http://openalea.gforge.inria.fr'}
 
-    package1 = pm.create_user_package("MyTestPackage",
+    package1 = pm.create_user_package("MyTestPackage2",
                                       metainfo, os.path.curdir)
     assert package1 is not None
 
@@ -118,6 +125,6 @@ def test_nodewriter():
                                    outputs=(),
                                    )
     package1.write()
-    pm.init()
-    newsg = pm.get_node('MyTestPackage', 'mynode')
+    pm.init("MyTestPackage2")
+    newsg = pm.get_node('MyTestPackage2', 'mynode')
     package1.remove_files()

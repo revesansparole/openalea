@@ -717,14 +717,15 @@ class PackageManager(Observed):
         Return the created package
         :param path : the directory where to create the package
         """
-
         if name in self.pkgs:
             return self.pkgs[name]
 
         # Create directory
-        if not path:
+        if path is None:
             path = get_userpkg_dir()
+
         path = os.path.join(path, name)
+        print "path", path
 
         if not isdir(path):
             os.mkdir(path)

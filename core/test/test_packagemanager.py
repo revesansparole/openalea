@@ -43,44 +43,45 @@ from openalea.core.settings import Settings
 #         assert "C:\\Windows" in pkgman.get_wralea_path()
 
 
-def test_load_pm():
-    pkgman = PackageManager()
-    pkgman.init()
+# def test_load_pm():
+#     pkgman = PackageManager()
+#     pkgman.init()
+#
+#     simpleop = pkgman["openalea.flow control"]
+#     assert simpleop
+#
+#     addfactory = simpleop.get_factory('command')
+#     assert addfactory is not None
+#     assert addfactory.instantiate()
+#
+#     valfactory = simpleop.get_factory('rendez vous')
+#     assert valfactory is not None
 
-    simpleop = pkgman["openalea.flow control"]
-    assert simpleop
 
-    addfactory = simpleop.get_factory('command')
-    assert addfactory is not None
-    assert addfactory.instantiate()
-
-    valfactory = simpleop.get_factory('rendez vous')
-    assert valfactory is not None
-
-
-def test_category():
-    pkgman = PackageManager()
-
-    pkgman.init()
-    pkgman.find_and_register_packages()
-
-    # test if factory are dedoubled
-    for cat in pkgman.category.values():
-        s = set()
-        for factory in cat:
-            assert factory not in s
-            s.add(factory)
+# def test_category():
+#     pkgman = PackageManager()
+#
+#     pkgman.init()
+#     pkgman.find_and_register_packages()
+#
+#     # test if factory are dedoubled
+#     for cat in pkgman.category.values():
+#         s = set()
+#         for factory in cat:
+#             assert factory not in s
+#             s.add(factory)
 
 
 def test_search():
     pkgman = PackageManager()
-    pkgman.load_directory("./")
+    pkgman.init("./")
+    print pkgman.keys()
 
-    assert 'Test' in pkgman
+    assert 'pkg_test' in pkgman
 
-    res = pkgman.search_node("sum")
-    print res
-    assert "sum" in res[0].name
+    res = pkgman.search_node("+")
+    assert len(res) >= 0
+    assert "+" in res[0].name
 
     # comment these 3 lines because system.command is not part
     # of any nodes anymore.
