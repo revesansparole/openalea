@@ -47,15 +47,20 @@ def test_package_get_pkg_files():
 
 
 def test_package_reload():
-    # create new python package toto
-    if not os.path.exists("toto"):
-        os.mkdir("toto")  # TODO: potential troubles here if someone
+    pkgname = "takatik"
+    # create new python package 'pkgname'
+    print 1, os.getcwd()
+    print os.listdir('.')
+    if not os.path.exists(pkgname):
+        print 2
+        os.mkdir(pkgname)  # TODO: potential troubles here if someone
                           # else uses toto outside
 
-    f = open("toto/__init__.py", 'w')
+    print 3
+    f = open("%s/__init__.py" % pkgname, 'w')
     f.close()
 
-    f = open("toto/test_reload.py", 'w')
+    f = open("%s/test_reload.py" % pkgname, 'w')
     f.write("""# toto
 
 def func():
@@ -63,11 +68,11 @@ def func():
 """)
     f.close()
 
-    import toto.test_reload
-    assert toto.test_reload.func() == 4
+    exec "import %s.test_reload as toto" % pkgname
+    assert toto.func() == 4
 
     # rewrite python module in package
-    f = open("toto/test_reload.py", 'w')
+    f = open("%s/test_reload.py" % pkgname, 'w')
     f.write("""# toto
 
 def func():
@@ -75,12 +80,12 @@ def func():
 """)
     f.close()
 
-    pkg = Package("Test", {}, "toto")
+    pkg = Package("Test", {}, pkgname)
     pkg.reload()
-    assert toto.test_reload.func() == 5
+    assert toto.func() == 5
 
     #clean up toto package
-    shutil.rmtree("toto")
+    shutil.rmtree(pkgname)
 
 
 def test_package_get_wralea_path():  # TODO: improve test with non working cases

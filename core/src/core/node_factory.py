@@ -22,8 +22,7 @@ Nodes on demand for the dataflow.
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-
-from copy import copy, deepcopy
+from copy import deepcopy
 import inspect
 import os
 import string
@@ -42,7 +41,7 @@ class AbstractFactory(Observed):
 
     mimetype = "openalea/nodefactory"
 
-    def __init__(self,
+    def __init__(self,  # TODO: GRUUIK, not maintainable, does not match NodeFactory.__init__
                  name,
                  description='',
                  category='',
@@ -57,20 +56,18 @@ class AbstractFactory(Observed):
         """
         Create a factory.
 
-        :param name: user name for the node (must be unique) (String)
-        :param description: description of the node (String)
-        :param category: category of the node (String)
-        :param inputs: inputs description
-        :param outputs: outputs description, value=0
-        :param lazy: enable lazy evaluation (default = False)
-        :param view: custom view (default = None)
-        :param alias: list of alias name
-        :param authors: authors of the node. If Node, it should be replaced by the package authors.
-
-        .. note:: inputs and outputs parameters are list of dictionnary such
-
-        inputs = (dict(name='x', interface=IInt, value=0,)
-        outputs = (dict(name='y', interface=IInt)
+        args:
+            - name (str): unique identifier for the node
+            - description (str): description of node behaviour
+            - category (str): tags to sort node types
+            - inputs (list of dict(name='X', interface=IFloat, value=0) )
+            - outputs (list of dict(name='X', interface=IFloat) )
+            - lazy (bool): flag to set on node, default True
+            - delay (int): minimum interval between two evaluations
+            - view (Widget): default None, graphical interface for node
+            - alias (list of str): list of alternative names to access the node
+            - authors (list of str): list of authors, if None, default to
+                                     package authors
         """
         Observed.__init__(self)
 
@@ -79,8 +76,8 @@ class AbstractFactory(Observed):
         self.description = description
         self.category = category
 
-        self.__pkg__ = None
-        self.__pkg_id__ = None
+        self.__pkg__ = None  # TODO: remove this link
+        self.__pkg_id__ = None  # TODO: remove this link
 
         self.inputs = inputs
         self.outputs = outputs
@@ -90,38 +87,46 @@ class AbstractFactory(Observed):
         self.delay = delay
         self.alias = alias
         self.authors = authors
+
     # Package property
 
-    def set_pkg(self, port):
-        """
+    def set_pkg(self, pkg):  # TODO: remove this link
+        """ Set a link to package own the factory
+
         An openalea package contains factories.
         The factory has a link to this package (weakref).
         The package id is the name of the package when the package is the
         Python object.
+
+        args:
+            - pkg (Package)
         """
-        if(not port):
+        if pkg is None:
             self.__pkg__ = None
             self.__pkg_id = None
         else:
-            self.__pkg__ = ref(port)
-            self.__pkg_id__ = port.get_id()
+            self.__pkg__ = ref(pkg)  # TODO: remove weakref
+            self.__pkg_id__ = pkg.get_id()
 
-        return port
+        return pkg  # TODO: what for
 
-    def get_pkg(self):
-        """todo"""
-        if(self.__pkg__):
-            port = self.__pkg__()
+    def get_pkg(self):  # TODO: remove this link
+        """ Return link to package owning the factory
+        """
+        if (self.__pkg__):
+            pkg = self.__pkg__()
         else:
-            port = None
+            pkg = None
+
         # Test if pkg has been reloaded
         # In this case the weakref is not valid anymore
-        if(not port and self.__pkg_id__):
+        if pkg is not None and self.__pkg_id__ is not None:
             from openalea.core.pkgmanager import PackageManager
-            port = self.set_pkg(PackageManager()[self.__pkg_id__])
-        return port
+            pkg = self.set_pkg(PackageManager()[self.__pkg_id__])  # TODO: GRUUIK
 
-    package = property(get_pkg, set_pkg)
+        return pkg
+
+    package = property(get_pkg, set_pkg)  # TODO: remove property
 
     def is_valid(self):
         """
@@ -131,22 +136,26 @@ class AbstractFactory(Observed):
         return True
 
     def get_id(self):
-        """ Returns the node factory Id """
+        """ Returns the node factory Id.
+        """
         return self.name
 
     def get_documentation(self):
         return ""
 
     def get_python_name(self):
-        """
-        Returns a valid python variable as name.
-        This is used to store the factory into a python list (i.e. __all__).
-        """
+        """ Returns a valid python variable as name.
 
+        This is used to store the factory into a python list (i.e. __all__).
+
+        return:
+            - (string)
+        """
         name = self.name
 
-        if(not name.isalnum()):
+        if not name.isalnum():
             name = '_%s' % (id(self))
+
         return name
 
     def get_authors(self):
@@ -154,44 +163,55 @@ class AbstractFactory(Observed):
 
         if no authors is found within the node, then it takes the authors field
         found in its package.
+        # TODO: GRUUIK ugly, call pkg.authors(node) for
+        this type of behaviour.
         """
-        if self.authors == None or self.authors == '':
+        if self.authors is None or self.authors == '':
             authors = self.package.metainfo['authors'] + ' (wralea authors)'
         else:
             authors = self.authors
+
         return authors
 
-    def get_tip(self, asRst=False):
+    def get_tip(self, as_rst=False):
         """ Return the node description
 
         if no authors is found within the node, then it takes the authors field
         found in its package.
+
+        args:
+            - as_rst (bool): default False, rspecify formatting
+                             for the description (html or rst)
+
+        return:
+            - (str)
         """
 
-
-        if not asRst:
-            return "<b>Name:</b> %s<br/>" % (self.name,) + \
-                   "<b>Category:</b> %s<br/>" % (self.category,) + \
-                   "<b>Package:</b> %s<br/>" % (self.package.name,) + \
-                   "<b>Authors:</b> %s<br/>" % (self.get_authors(),) + \
-                   "<b>Description:</b> %s<br/>" % (self.description,)
+        if not as_rst:
+            return "<b>Name:</b> %s<br/>" % self.name + \
+                   "<b>Category:</b> %s<br/>" % self.category + \
+                   "<b>Package:</b> %s<br/>" % self.package.name + \
+                   "<b>Authors:</b> %s<br/>" % self.get_authors() + \
+                   "<b>Description:</b> %s<br/>" % self.description
         else:
-            return "**Name:** %s\n\n" % (self.name,) + \
-                   "**Category:** %s\n\n" % (self.category,) + \
-                   "**Package:** %s\n\n" % (self.package.name,) + \
-                   "**Authors:** %s\n\n" % (self.get_authors(),) + \
-                   "**Description:** %s\n\n" % (self.description,)
+            return "**Name:** %s\n\n" % self.name + \
+                   "**Category:** %s\n\n" % self.category + \
+                   "**Package:** %s\n\n" % self.package.name + \
+                   "**Authors:** %s\n\n" % self.get_authors() + \
+                   "**Description:** %s\n\n" % self.description
 
     def instantiate(self, call_stack=[]):
         """ Return a node instance
 
-        :param call_stack: the list of NodeFactory id already in call stack
-            (in order to avoir infinite recursion)
+        args:
+            - call_stack (list of factory id): a list of node factories
+                               already in call stack (in order to avoid
+                               infinite recursion)
         """
         raise NotImplementedError()
 
     def instantiate_widget(self, node=None, parent=None, edit=False,
-        autonomous=False):
+                           autonomous=False):
         """ Return the corresponding widget initialised with node"""
         raise NotImplementedError()
 
@@ -207,9 +227,9 @@ class AbstractFactory(Observed):
         self.package = None
 
         ret = deepcopy(self)
-        self.packageg = pkg
+        self.package = pkg
 
-        old_pkg, new_pkg = args['replace_pkg']
+        old_pkg, new_pkg = args['replace_pkg']  # TODO: GRUUIK use arguments
 
         ret.package = new_pkg
         return ret
@@ -218,29 +238,29 @@ class AbstractFactory(Observed):
         """ Remove files depending of factory """
         pass
 
-    def is_data(self):
+    def is_data(self):  # TODO: ad hoc, to remove
         return False
 
-    def is_node(self):
+    def is_node(self):  # TODO: ad hoc, to remove
         return False
 
-    def is_composite_node(self):
+    def is_composite_node(self):  # TODO: ad hoc, to remove
         return False
 
     def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
-        odict['__pkg__'] = None # remove weakref reference
+        odict = self.__dict__.copy()  # copy the dict since we change it
+        odict['__pkg__'] = None  # remove weakref reference
         return odict
 
     def __setstate__(self, dict):
         self.__dict__.update(dict)
-        self.get_pkg()
+        self.get_pkg()  # TODO: GRUUIK
 
 
-def Alias(factory, name):
+def Alias(factory, name):  # TODO: misleading, why not add_alias() instead
     """ Create an alias for factory.
     """
-    if(factory.alias is None):
+    if factory.alias is None:
         factory.alias = [name]
     else:
         factory.alias.append(name)
@@ -257,34 +277,33 @@ class NodeFactory(AbstractFactory):
                  category='',
                  inputs=None,
                  outputs=None,
-                 nodemodule='',
+                 nodemodule='__builtin__',
                  nodeclass=None,
                  widgetmodule=None,
                  widgetclass=None,
-                 search_path=None,
+                 search_path=[],
                  authors=None,
                  **kargs):
-        """Create a node factory.
+        """
+        Create a node factory.
 
-        :param name: user name for the node (must be unique) (String)
-        :param description: description of the node (String)
-        :param category: category of the node (String)
-        :param inputs: inputs description
-        :param outputs: outputs description
-        :param nodemodule: python module to import for node (String)
-        :param nodeclass:  node class name to be created (String)
-        :param widgetmodule: python module to import for widget (String)
-        :param widgetclass: widget class name (String)
-        :param search_path: list of directories where to search for
-            module
-
-        :note: inputs and outputs parameters are list of dictionnary such
-
-        inputs = (dict(name='x', interface=IInt, value=0,)
-        outputs = (dict(name='y', interface=IInt)
+        args:
+            - name (str): unique identifier for the node
+            - description (str): description of node behaviour
+            - category (str): tags to sort node types
+            - inputs (list of dict(name='X', interface=IFloat, value=0) )
+            - outputs (list of dict(name='X', interface=IFloat) )
+            - nodemodule (str): name of node module
+            - nodeclass (str): name of node class
+            - widgetmodule (str): name of widget module
+            - widgetclass (str): name of widget class
+            - search_path (list of str): list of directories to search for
+                                         node modules
+            - authors (list of str): list of authors, if None, default to
+                                     package authors
         """
         AbstractFactory.__init__(self, name, description, category,
-                                 inputs, outputs, authors=authors, **kargs)
+                                 inputs, outputs, authors=authors, **kargs)  # TODO: GRUUIK, rely on implicit **kargs
 
         # Factory info
         self.nodemodule_name = nodemodule
@@ -292,7 +311,7 @@ class NodeFactory(AbstractFactory):
         self.widgetmodule_name = widgetmodule
         self.widgetclass_name = widgetclass
 
-        self.toscriptclass_name = kargs.get("toscriptclass_name", None)
+        self.toscriptclass_name = kargs.get("toscriptclass_name", None)  # TODO: deprecated
 
         # Cache
         self.nodeclass = None
@@ -300,28 +319,28 @@ class NodeFactory(AbstractFactory):
 
         # Module path, value=0
         self.nodemodule_path = None
-        if(not search_path):
-            self.search_path = []
-        else:
-            self.search_path = search_path
-
+        self.search_path = list(search_path)
         self.module_cache = None
 
         # Context directory
         # inspect.stack()[1][1] is the caller python module
         caller_dir = os.path.dirname(os.path.abspath(inspect.stack()[1][1]))
-        if(not caller_dir in self.search_path):
+        if caller_dir not in self.search_path:
             self.search_path.append(caller_dir)
-
 
     def is_node(self):
         return True
 
     def get_python_name(self):
-        """ Return a python valid name """
+        """ Returns a valid python variable as name.
 
-        module_name = self.nodemodule_name
-        module_name = module_name.replace('.','_')
+        This is used to store the factory into a python list (i.e. __all__).
+
+        return:
+            - (string)
+        """
+        # module_name = self.nodemodule_name
+        # module_name = module_name.replace('.', '_')
         return "%s_%s" % (self.nodemodule_name, self.nodeclass_name)
 
     def __getstate__(self):
@@ -331,7 +350,7 @@ class NodeFactory(AbstractFactory):
         odict['nodemodule'] = None
         odict['nodeclass'] = None
         odict['module_cache'] = None
-        odict['__pkg__'] = None # remove weakref reference
+        odict['__pkg__'] = None  # remove weakref reference
 
         return odict
 
@@ -357,34 +376,38 @@ class NodeFactory(AbstractFactory):
         return self.get_classobj().__doc__
 
     def instantiate(self, call_stack=[]):
-        """
-        Returns a node instance.
-        :param call_stack: the list of NodeFactory id already in call stack
-        (in order to avoir infinite recursion)
-        """
+        """ Return a node instance
 
+        args:
+            - call_stack (list of factory id): a list of node factories
+                               already in call stack (in order to avoid
+                               infinite recursion)
+        """
         # The module contains the node implementation.
         module = self.get_node_module()
         classobj = module.__dict__.get(self.nodeclass_name, None)
 
         if classobj is None:
-            raise Exception("Cannot instantiate '" + \
-                self.nodeclass_name + "' from " + str(module))
+            msg = "Cannot instantiate '%s' from %s" % (self.nodeclass_name,
+                                                       str(module))
+            raise ImportError(msg)
 
         # If class is not a Node, embed object in a Node class
-        if(not hasattr(classobj, 'mro') or not AbstractNode in classobj.mro()):
-
+        # print "classobj", classobj, AbstractNode
+        # if hasattr(classobj, 'mro'):
+        #     print classobj.mro()
+        # if not issubclass(classobj, AbstractNode):  # TODO: deprecated???
+        if (not hasattr(classobj, 'mro') or not AbstractNode in classobj.mro()):
             # Check inputs and outputs
-            if(self.inputs is None):
+            if self.inputs is None:
                 sign = sgn.Signature(classobj)
                 self.inputs = sign.get_parameters()
-            if(self.outputs is None):
+            if self.outputs is None:
                 self.outputs = (dict(name="out", interface=None),)
 
-
             # Check and Instantiate if we have a functor class
-            if((type(classobj) == types.TypeType)
-               or (type(classobj) == types.ClassType)):
+            if (type(classobj) == types.TypeType
+                or type(classobj) == types.ClassType):
 
                 _classobj = classobj()
                 if callable(_classobj):
@@ -394,34 +417,35 @@ class NodeFactory(AbstractFactory):
 
         # Class inherits from Node
         else:
-            try:
+            try:  # TODO: GRUUIK change AbstractNode.__init__ to avoid troubles
                 node = classobj(self.inputs, self.outputs)
             except TypeError, e:
                 node = classobj()
 
         # Properties
-        try:
-            node.factory = self
-            node.lazy = self.lazy
-            if(not node.caption):
-                node.set_caption(self.name)
+        # try:
+        node.factory = self
+        node.lazy = self.lazy
+        if len(node.caption) == 0:
+            node.set_caption(self.name)
 
-            node.delay = self.delay
-        except:
-            pass
+        node.delay = self.delay
+        # except:
+        #     pass
 
-        # to script
-        if self.toscriptclass_name is not None :
-            node._to_script_func = module.__dict__.get(self.toscriptclass_name, None)
+        # to script  # TODO: deprecated
+        if self.toscriptclass_name is not None:
+            node._to_script_func = module.__dict__.get(self.toscriptclass_name,
+                                                       None)
 
         return node
 
-    def instantiate_widget(self, node=None, parent=None,
-                            edit=False, autonomous=False):
+    def instantiate_widget(self, node=None, parent=None,  # TODO: externalize
+                           edit=False, autonomous=False):
         """ Return the corresponding widget initialised with node """
 
         # Code Editor
-        if(edit):
+        if edit:
             from openalea.visualea.code_editor import get_editor
             w = get_editor()(parent)
             try:
@@ -436,15 +460,15 @@ class NodeFactory(AbstractFactory):
             return w
 
         # Node Widget
-        if(node == None):
+        if node is None:
             node = self.instantiate()
 
         modulename = self.widgetmodule_name
-        if(not modulename):
+        if not modulename:
             modulename = self.nodemodule_name
 
         # if no widget declared, we create a default one
-        if(not modulename or not self.widgetclass_name):
+        if not modulename or not self.widgetclass_name:
 
             from openalea.visualea.node_widget import DefaultNodeWidget
             return DefaultNodeWidget(node, parent, autonomous)
@@ -452,13 +476,13 @@ class NodeFactory(AbstractFactory):
         else:
             # load module
             (file, pathname, desc) = imp.find_module(modulename,
-                self.search_path + sys.path)
+                                                     self.search_path + sys.path)
 
             sys.path.append(os.path.dirname(pathname))
             module = imp.load_module(modulename, file, pathname, desc)
             sys.path.pop()
 
-            if(file):
+            if (file):
                 file.close()
 
             widgetclass = module.__dict__[self.widgetclass_name]
@@ -470,24 +494,23 @@ class NodeFactory(AbstractFactory):
         return PyNodeFactoryWriter(self)
 
     def get_node_module(self):
-        """
-        Return the python module object (if available)
-        Raise an Import Error if no module is associated
+        """ Return the python module object that own the node.
+
+        Raise an Import Error if no module is associated.
         """
         LOCAL_IMPORT = False
 
-        if not self.nodemodule_name:
-            self.nodemodule_name = '__builtin__'
+        # if not self.nodemodule_name:
+        #     self.nodemodule_name = '__builtin__'
 
         # Test if the module is already in sys.modules
         if (self.nodemodule_path and
-            self.module_cache and
-            not hasattr(self.module_cache, 'oa_invalidate')):
+                self.module_cache and
+                not hasattr(self.module_cache, 'oa_invalidate')):
             return self.module_cache
 
         sav_path = sys.path
         sys.path = self.search_path + sav_path
-        # print 'SEARCH PATH ', self.search_path
         try:
             # load module
 
@@ -496,6 +519,7 @@ class NodeFactory(AbstractFactory):
             if LOCAL_IMPORT:
                 if self.nodemodule_name in sys.modules:
                     del sys.modules[self.nodemodule_name]
+
             __import__(self.nodemodule_name)
             nodemodule = sys.modules[self.nodemodule_name]
             try:
@@ -512,31 +536,29 @@ class NodeFactory(AbstractFactory):
             sys.path = sav_path
             print self.nodemodule_name
             raise import_error
-        else:
+        finally:
             sys.path = sav_path
 
     def get_node_file(self):
+        """ Return the path of the python module.
         """
-        Return the path of the python module.
-
-        """
-
         if self.nodemodule_path or self.module_cache:
             return self.nodemodule_path
         elif self.nodemodule_name:
             self.get_node_module()
             return self.nodemodule_path
 
-
     def get_node_src(self, cache=True):
-        """
-        Return a string containing the node src
-        Return None if src is not available
-        If cache is False, return the source on the disk
-        """
+        """ Return a string containing the python code for the node
 
+        Return None if source file is not available
+
+        args:
+            - cache(bool): default True, if False, reread
+                           the source from the disk
+        """
         # Return cached source if any
-        if(self.src_cache and cache):
+        if self.src_cache and cache:
             return self.src_cache
 
         module = self.get_node_module()
@@ -548,8 +570,9 @@ class NodeFactory(AbstractFactory):
         return inspect.getsource(cl)
 
     def apply_new_src(self, newsrc):
-        """
-        Execute new src and store the source into the factory.
+        """ Execute new source code.
+
+         Source is stored into the factory for later use.
         """
         module = self.get_node_module()
 
@@ -560,8 +583,7 @@ class NodeFactory(AbstractFactory):
         self.src_cache = newsrc
 
     def save_new_src(self, newsrc):
-        """
-        Execute the new source and replace the text into the old file
+        """ Execute the new source and replace the text into the old file
         containing the source.
         """
         module = self.get_node_module()
@@ -575,12 +597,11 @@ class NodeFactory(AbstractFactory):
         modulesrc = inspect.getsource(module)
 
         # Pass if no modications
-        if(nodesrc == newsrc):
+        if nodesrc == newsrc:
             return
 
         # replace old code with new one
         modulesrc = modulesrc.replace(nodesrc, newsrc)
-
 
         # write file
         myfile = open(self.nodemodule_path, 'w')
@@ -588,11 +609,11 @@ class NodeFactory(AbstractFactory):
         myfile.close()
 
         # reload module
-        if(self.module_cache):
+        if self.module_cache:
             self.module_cache.invalidate_oa = True
 
         self.src_cache = None
-        m = self.get_node_module()
+        # m = self.get_node_module()
         # reload(m)
         # Recompile
         # import py_compile
@@ -600,7 +621,7 @@ class NodeFactory(AbstractFactory):
 
 
 # Class Factory:
-Factory = NodeFactory
+Factory = NodeFactory  # TODO: what for?????
 
 
 class PyNodeFactoryWriter(object):
@@ -629,7 +650,7 @@ $NAME = Factory(name=$PNAME,
         """ Return the python string representation """
         f = self.factory
         fstr = string.Template(self.nodefactory_template)
-        
+
         name = f.get_python_name()
         name = name.replace('.', '_')
         result = fstr.safe_substitute(NAME=name,
@@ -642,5 +663,5 @@ $NAME = Factory(name=$PNAME,
                                       LISTIN=repr(f.inputs),
                                       LISTOUT=repr(f.outputs),
                                       WIDGETMODULE=repr(f.widgetmodule_name),
-                                      WIDGETCLASS=repr(f.widgetclass_name),)
+                                      WIDGETCLASS=repr(f.widgetclass_name), )
         return result
