@@ -1,5 +1,6 @@
-
+import os
 import unittest
+
 from openalea.core.path import tempdir, path
 from openalea.core.service.data import DataFactory, MimeType
 
@@ -90,6 +91,11 @@ class TestProject(unittest.TestCase):
         # Only mimetype is available
         d = DataFactory(path=self.tmpdir / 'test.py', mimetype='text/x-python')
         self.assertEqual(d.mimetype, 'text/x-python')
+
+        # cleanup afterward
+        for name in ("test.dat", "test.py", "model.py"):
+            if os.path.exists(name):
+                os.remove(name)
 
     def test_arrange_data_args(self):
         # arrange_data_args is not a public function, please do not use it outside service.data
