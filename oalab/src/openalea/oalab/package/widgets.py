@@ -55,7 +55,7 @@ class PackageViewWidget(OALabTreeView):
                                                             CompositeNodeFactory.mimetype]:
             factory = package_manager[pkg_id][factory_id]
             factoryDoc = factory.get_documentation()
-            txt = factory.get_tip(asRst=True) + "\n\n"
+            txt = factory.get_tip(as_rst=True) + "\n\n"
             if factoryDoc is not None:
                 txt += "**Docstring:**\n" + factoryDoc
 
@@ -85,7 +85,7 @@ class PackageCategorieViewWidget(OALabTreeView):
                                                             CompositeNodeFactory.mimetype]:
             factory = package_manager[pkg_id][factory_id]
             factoryDoc = factory.get_documentation()
-            txt = factory.get_tip(asRst=True) + "\n\n"
+            txt = factory.get_tip(as_rst=True) + "\n\n"
             if factoryDoc is not None:
                 txt += "**Docstring:**\n" + factoryDoc
             applet = get_applet(identifier='HelpWidget')
@@ -129,7 +129,7 @@ class PackageSearchWidget(QtGui.QWidget):
                                                             CompositeNodeFactory.mimetype]:
             factory = package_manager[pkg_id][factory_id]
             factoryDoc = factory.get_documentation()
-            txt = factory.get_tip(asRst=True) + "\n\n"
+            txt = factory.get_tip(as_rst=True) + "\n\n"
             if factoryDoc is not None:
                 txt += "**Docstring:**\n" + factoryDoc
             applet = get_applet(identifier='HelpWidget')

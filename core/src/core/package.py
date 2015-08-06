@@ -258,7 +258,6 @@ class Package(PackageDict):
         args:
             - factory (Factory)
         """
-
         if factory.name in self:
             msg = "Factory %s already defined. Ignored !" % factory.name
             raise KeyError(msg)
@@ -296,7 +295,6 @@ class Package(PackageDict):
             raise KeyError(msg)
 
         old_fac = self.get_factory(old_name)
-        print self.keys()
         if old_fac.alias is not None:  # TODO: to remove
             for name in old_fac.alias:
                 del self[protect(name)]

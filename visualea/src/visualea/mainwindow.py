@@ -872,7 +872,7 @@ class MainWindow(qt.QtGui.QMainWindow,
                                                             CompositeNodeFactory.mimetype]:
             factory = self.pkgmanager[pkg_id][factory_id]
             factoryDoc = factory.get_documentation()
-            txt = factory.get_tip(asRst=True) + "\n\n"
+            txt = factory.get_tip(as_rst=True) + "\n\n"
             if factoryDoc is not None:
                 txt += "**Docstring:**\n" + factoryDoc
             self.helpWidget.set_rst(txt)

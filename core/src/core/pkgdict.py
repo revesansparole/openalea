@@ -50,6 +50,9 @@ def protect(name):
     return "#" + name
 
 
+protected = protect  # TODO: hack for backcompatibility
+
+
 class PackageDict(dict):
     """ Dictionnary with case insensitive key.
 

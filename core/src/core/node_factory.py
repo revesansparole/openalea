@@ -397,7 +397,7 @@ class NodeFactory(AbstractFactory):
         # if hasattr(classobj, 'mro'):
         #     print classobj.mro()
         # if not issubclass(classobj, AbstractNode):  # TODO: deprecated???
-        if (not hasattr(classobj, 'mro') or not AbstractNode in classobj.mro()):
+        if not hasattr(classobj, 'mro') or not AbstractNode in classobj.mro():
             # Check inputs and outputs
             if self.inputs is None:
                 sign = sgn.Signature(classobj)

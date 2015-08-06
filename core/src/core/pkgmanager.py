@@ -457,7 +457,6 @@ class PackageManager(Observed):
         ret = None
         for r in readers:
             if r:
-                print "reader", r
                 ret = r.register_packages(self)
             else:
                 logger.error("Unable to load package %s." % (dirname,))
@@ -725,7 +724,6 @@ class PackageManager(Observed):
             path = get_userpkg_dir()
 
         path = os.path.join(path, name)
-        print "path", path
 
         if not isdir(path):
             os.mkdir(path)
