@@ -25,6 +25,7 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 
+from glob import glob
 # import inspect
 import os
 import sys
@@ -45,7 +46,7 @@ from openalea.core.vlab import vlab_object
 class UnknownNodeError(Exception):
     def __init__(self, name):
         Exception.__init__(self)
-        self.message = "Cannot find node : %s" % name
+        self.message = "Cannot find node : %s" % name  # TODO: useless, use pass instead
 
     def __str__(self):
         return self.message
@@ -55,29 +56,27 @@ class FactoryExistsError(Exception):
     pass
 
 
-class DynamicPackage(PackageDict):
-    """
-    Package for dynamical parsing of python file
-    """
-
-    def __init__(self, name, metainfo):
-        PackageDict.__init__(self)
-        self.metainfo = metainfo
-        self.name = name
+# class DynamicPackage(PackageDict):
+#     """
+#     Package for dynamical parsing of python file
+#     """
+#
+#     def __init__(self, name, metainfo):
+#         PackageDict.__init__(self)
+#         self.metainfo = metainfo
+#         self.name = name
 
 
 class Package(PackageDict):
-    """
-    A Package is a dictionary of node factory.
-    Each node factory is able to generate node and their widgets.
+    """ A Package is a dictionary of node factories.
 
     Meta information are associated with a package.
     """
 
-    # type information for drag and drop.
+    # information type for drag and drop.
     mimetype = "openalea/package"
 
-    def __init__(self, name, metainfo, path=None):
+    def __init__(self, name, metainfo, pth=None):
         """ Create a Package.
 
         Attended keys for the metainfo are:
@@ -91,8 +90,9 @@ class Package(PackageDict):
 
         args:
             - name (str): used as a unique identifier for the package
+                          case sensitive
             - metainfo (dict):
-            - path (str): path where the package lies: either a directory
+            - pth (str): path where the package lies: either a directory
                           or a full wralea path
         """
         PackageDict.__init__(self)
@@ -102,7 +102,7 @@ class Package(PackageDict):
 
         # package directory
 
-        if path is None:
+        if pth is None:  # TODO: usefull???
             # package directory
             import inspect
             # get the path of the file which call this function
@@ -112,26 +112,27 @@ class Package(PackageDict):
 
         # wralea.py path is specified
         else:
-            if not os.path.exists(path):
-                os.mkdir(path)
-            if not os.path.isdir(path):
-                self.path = os.path.dirname(path)
-                self.wralea_path = path
+            if not os.path.exists(pth):  # TODO: potential trouble if pth is wralea pth
+                os.mkdir(pth)
+
+            if os.path.isdir(pth):
+                self.path = pth
+                self.wralea_path = os.path.join(pth, "__wralea__.py")
             else:
-                self.path = path
-                self.wralea_path = os.path.join(self.path, "__wralea__.py")
+                self.path = os.path.dirname(pth)
+                self.wralea_path = pth
 
                 # wralea_name = name.replace('.', '_')
 
     def is_directory(self):
         """
         New style package.
-        A package is embeded in a unique directory.
+        A package is embedded in a unique directory.
         This directory can not contain more than one package.
         Thus, you can move, copy or delete a package by acting
         on the directory without ambiguity.
 
-        Return True if the package is embeded in a directory.
+        Return True if the package is embedded in a directory.
         """
         return self.wralea_path.endswith("__wralea__.py")
 
@@ -143,28 +144,28 @@ class Package(PackageDict):
         return False
 
     def get_pkg_files(self):
+        """ Iterate over the names of python files in the package.
+        These file names are relative to self.path
+
+        return:
+            - (list of str)
         """
-        Return the list of python filename of the package.
-        The filename are relative to self.path
-        """
+        for src in glob(os.path.join(self.path, "*.py")):
+            name = os.path.basename(src)
+            if not name.startswith("."):
+                yield name
 
         # assert self.is_directory()
 
-        ret = []
-        for name in os.listdir(self.path):
-            src = os.path.join(self.path, name)
-            if (os.path.isfile(src) and
-                    not name.endswith(".pyc") and
-                    not name.startswith(".")):
-                ret.append(name)
-
-            # if (not os.path.isfile(src) or
-            #         name.endswith(".pyc") or
-            #         name.startswith(".")):
-            #     continue
-            # ret.append(name)
-
-        return ret
+        # ret = []
+        # for name in os.listdir(self.path):
+        #     src = os.path.join(self.path, name)
+        #     if (os.path.isfile(src) and
+        #             not name.endswith(".pyc") and
+        #             not name.startswith(".")):
+        #         ret.append(name)
+        #
+        # return ret
 
     def remove_files(self):
         """ Remove pkg files """
@@ -173,28 +174,33 @@ class Package(PackageDict):
     def reload(self):
         """ Reload all python files of the package.
         """
-        sources = self.get_pkg_files()
-
-        s = set()  # set of full path name
-        for f in sources:
-            if f.endswith('.py'):
-                f += 'c'
-
-            s.add(os.path.abspath(os.path.join(self.path, f)))
+        sources = set([os.path.abspath(os.path.join(self.path, src))
+                      for src in self.get_pkg_files()])
+        # sources = self.get_pkg_files()
+        #
+        # s = set()  # set of full path name
+        # for f in sources:
+        #     if f.endswith('.py'):
+        #         f += 'c'
+        #
+        #     s.add(os.path.abspath(os.path.join(self.path, f)))
 
         for module in sys.modules.values():
             if module is not None:
-                # try:
-                modulefile = os.path.abspath(module.__file__)
-                if modulefile in s:
-                    module.oa_invalidate = True
-                    reload(module)
-                    print "Reloaded ", module.__name__
-                # except:
-                #     pass
+                try:
+                    module_file = os.path.abspath(module.__file__)
+                    if module_file in sources:
+                        if os.path.exists(module_file + "c"):
+                            os.remove(module_file + "c")
+
+                        module.oa_invalidate = True
+                        reload(module)
+                        print "Reloaded ", module.__name__
+                except AttributeError:  # module is builtin
+                    pass
 
     def get_wralea_path(self):
-        """ Return the full path of the wralea.py.
+        """ Return the full path of the __wralea__.py.
 
          Path must have been set before.
          """
@@ -266,12 +272,12 @@ class Package(PackageDict):
         # raise an error.
         # This function return True or raise an error to have a specific
         # diagnostic.
-        try:
-            factory.is_valid()
-        except Exception, e:
-            factory.package = None
-            del (self[factory.name])
-            raise e
+        # try:  # TODO: removed this GRUUIK part
+        #     factory.is_valid()
+        # except Exception, e:
+        #     factory.package = None
+        #     del (self[factory.name])
+        #     raise e
 
         # Add Aliases
         if factory.alias is not None:
@@ -285,7 +291,18 @@ class Package(PackageDict):
             - old_name (str): name previously used by the factory
             - factory (Factory): new factory to use instead
         """
+        if factory.name in self:
+            msg = "Factory %s already defined. Ignored !" % factory.name
+            raise KeyError(msg)
+
+        old_fac = self.get_factory(old_name)
+        print self.keys()
+        if old_fac.alias is not None:  # TODO: to remove
+            for name in old_fac.alias:
+                del self[protect(name)]
+
         del self[old_name]
+
         self.add_factory(factory)
 
     def get_names(self):
@@ -309,7 +326,7 @@ class Package(PackageDict):
             raise UnknownNodeError("%s.%s" % (self.name, name))
 
 
-class UserPackage(Package):
+class UserPackage(Package):  # TODO: bof, a way to get rid of write
     """ Package user editable and persistent.
     """
 

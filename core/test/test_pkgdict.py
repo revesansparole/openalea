@@ -70,6 +70,13 @@ def test_pkg_dict_delitem():
     assert 'A' not in d
     assert 'b' in d
 
+    for k in ['c', 'C', protect('c'), protect('C')]:
+        d[k] = 1
+        del d[k]
+        assert 'c' not in d
+        assert 'C' not in d
+        assert protect('c') not in d
+
 
 def test_pkg_dict_get():
     d = PackageDict()

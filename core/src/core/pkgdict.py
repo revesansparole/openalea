@@ -17,6 +17,11 @@
 """ Special Dict with case insensitive key and protected fields.
 """
 
+# TODO: handling of protect is confusing
+# explicit for set
+# implicit for get
+# explicit for del
+
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
