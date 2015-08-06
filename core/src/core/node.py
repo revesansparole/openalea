@@ -171,7 +171,7 @@ class AbstractNode(Observed, HasAdHoc):
 
 class Node(AbstractNode):
     """ A Node is a callable object with typed inputs and outputs.
-    Inputs and Outpus are indexed by their position or by a name (str)
+    Inputs and Outputs are indexed by their position or by a name (str)
     """
 
     @staticmethod
@@ -253,7 +253,7 @@ class Node(AbstractNode):
             Observed.notify_listeners(self, event)
 
     def __call__(self, inputs=()):
-        """ Call function. Must be overriden """
+        """ Call function. Must be overridden """
         raise NotImplementedError()
 
     def get_tip(self):
@@ -453,7 +453,7 @@ class Node(AbstractNode):
             # TODO: any other case?
 
     # Status
-    def unvalidate_input(self, index_key,
+    def invalidate_input(self, index_key,
                          notify=True):  # TODO: correct spelling and remove function
         """ Invalidate node and notify listeners.
 
@@ -568,7 +568,7 @@ class Node(AbstractNode):
 
         if changed:
             self.inputs[index] = val
-            self.unvalidate_input(index, notify)
+            self.invalidate_input(index, notify)
 
     def set_output(self, key,
                    val):  # TODO: remove, data are not to be stored in the node
@@ -605,7 +605,7 @@ class Node(AbstractNode):
 
         index = self.map_index_in[index_key]
         self.input_states[index] = state
-        self.unvalidate_input(index)
+        self.invalidate_input(index)
 
     def get_nb_input(self):
         """ Return the nb of input ports

@@ -424,4 +424,4 @@ class IInterfaceWidget(AbstractListener):
         return node.get_input_port(name=parameter_str).get_label()
 
     def unvalidate(self):
-        self.node.unvalidate_input(self.param_str)
+        self.node.invalidate_input(self.param_str)
