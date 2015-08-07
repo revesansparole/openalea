@@ -644,11 +644,11 @@ $NAME = Factory(name=$PNAME,
 """
 
     def __init__(self, factory):
-        self.set_factory(factory)
+        self.factory = factory
 
     def __repr__(self):
         """ Return the python string representation """
-        f = self.get_factory()
+        f = self.factory
         fstr = string.Template(self.nodefactory_template)
 
         name = f.get_python_name()

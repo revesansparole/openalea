@@ -414,7 +414,7 @@ $NAME = CompositeNodeFactory(name=$PNAME,
 """
 
     def __init__(self, factory):
-        self.set_factory(factory)
+        self.factory = factory
 
     def pprint_repr(self, obj, indent=3):
         """ Pretty print repr """
@@ -423,7 +423,7 @@ $NAME = CompositeNodeFactory(name=$PNAME,
     def __repr__(self):
         """ Return the python string representation """
 
-        f = self.get_factory()
+        f = self.factory
         fstr = string.Template(self.sgfactory_template)
 
         name = f.get_python_name()
@@ -451,7 +451,7 @@ $NAME = CompositeNodeFactory(name=$PNAME,
 
 class JSONCNFactoryWriter(PyCNFactoryWriter):
     def __repr__(self):
-        f = self.get_factory()
+        f = self.factory
 
         # minx = min(f.elt_ad_hoc.itervalues(),
         #            key=lambda x: x["position"][0])["position"][0]

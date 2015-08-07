@@ -69,7 +69,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         # graph modification status
         self.graph_modified = False
         self.evaluating = False
-        self.eval_algo = None
+        self.eval_algo = "default"
 
     def node(self, vid):  # TODO: change dataflow instead???
         """ Convenience function """
