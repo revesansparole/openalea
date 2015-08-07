@@ -71,7 +71,7 @@ class DisplayGraphWidget(qt.QtGui.QWidget, NodeWidget):
 
 
         # Add subwidgets (Need to sort widget)
-        for id in node.vertices():
+        for id in node.nodes():
 
             subnode = node.node(id)
 
@@ -114,7 +114,7 @@ class DisplayGraphWidget(qt.QtGui.QWidget, NodeWidget):
         userapp_layout = qt.QtGui.QVBoxLayout(userapp_widget)
 
 
-        for id in self.node.vertices():
+        for id in self.node.nodes():
 
             subnode = self.node.node(id)
             user_app = subnode.internal_data.get('user_application', False)

@@ -77,8 +77,26 @@ class CompositeNode(Node):
     def __len__ (self):
         return len(self._dataflow)
 
-    def nodes (self):
+    def nodes(self):
         return self._dataflow.vertices()
+
+    def vertices(self):  # TODO: hack to ensure backward compatibility
+        return self._dataflow.vertices()
+
+    def source(self, eid):  # TODO: hack to ensure backward compatibility
+        return self._dataflow.source(eid)
+
+    def target(self, eid):  # TODO: hack to ensure backward compatibility
+        return self._dataflow.target(eid)
+
+    def local_id(self, pid):  # TODO: hack to ensure backward compatibility
+        return self._dataflow.local_id(pid)
+
+    def source_port(self, eid):  # TODO: hack to ensure backward compatibility
+        return self._dataflow.source_port(eid)
+
+    def target_port(self, eid):  # TODO: hack to ensure backward compatibility
+        return self._dataflow.target_port(eid)
 
     def edges (self):
         return self._dataflow.edges()
