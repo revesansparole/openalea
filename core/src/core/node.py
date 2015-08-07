@@ -104,13 +104,6 @@ class AbstractNode(Observed, HasAdHoc):
         # Internal Data (caption...)
         self.internal_data = {}
 
-        # -- the ugly back reference -- # TODO: remove this
-        # !! Christophe, don't look at this one.
-        # proxy to higher level structure, aka CompositeNode.
-        # This is currently only used by the "wrap_method" node
-        # that needs to modify the topology of the graph.
-        self._composite_node = None
-
         # The default layout
         self.view = None
         self.user_application = None
@@ -175,10 +168,6 @@ class AbstractNode(Observed, HasAdHoc):
         """ Set id of the node.
         """
         self.set_data("id", node_id)
-
-    # -- the ugly back reference --
-    def set_compositenode(self, upper):  # TODO: remove GRUUIK
-        self._composite_node = proxy(upper)
 
     def close(self):  # TODO: when is this method called
         self.notify_listeners(("close", self))

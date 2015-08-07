@@ -70,14 +70,14 @@ class CompositeNode(Node):
         self.evaluating = False
         self.eval_algo = "default"
 
-    def node(self, vid):  # TODO: change dataflow instead???
+    def node(self, vid):
         """ Convenience function """
         return self._dataflow.actor(vid)
 
-    def __len__ (self):
+    def __len__ (self):  # TODO: hack to ensure backward compatibility
         return len(self._dataflow)
 
-    def nodes(self):
+    def nodes(self):  # TODO: hack to ensure backward compatibility
         return self._dataflow.vertices()
 
     def vertices(self):  # TODO: hack to ensure backward compatibility
@@ -98,7 +98,7 @@ class CompositeNode(Node):
     def target_port(self, eid):  # TODO: hack to ensure backward compatibility
         return self._dataflow.target_port(eid)
 
-    def edges (self):
+    def edges (self):  # TODO: hack to ensure backward compatibility
         return self._dataflow.edges()
 
     def copy_to(self, other):
@@ -167,9 +167,6 @@ class CompositeNode(Node):
         """
         vid = self._dataflow.add_vertex(vid)
         # vid = self.add_actor(node, vid)
-
-        # -- NOOOOOO THE UGLY BACK REFERENCE --
-        node.set_compositenode(self)  # TODO: GRUUIK to remove
 
         node.set_id(vid)
         for local_pid in xrange(node.get_nb_input()):
