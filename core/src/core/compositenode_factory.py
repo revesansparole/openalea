@@ -72,8 +72,6 @@ class CompositeNodeFactory(AbstractFactory):
         self.elt_data = kargs.get("elt_data", {})
         self.elt_value = kargs.get("elt_value", {})
         self.elt_ad_hoc = kargs.get("elt_ad_hoc", {})
-        # from openalea.core.algo.dataflow_evaluation import DefaultEvaluation
-        # self.eval_algo = kargs.get("eval_algo", DefaultEvaluation.__name__)  # TODO: use "default" instead
         self.eval_algo = kargs.get("eval_algo", "default")
 
         # Documentation
