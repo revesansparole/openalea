@@ -114,7 +114,7 @@ class DataFactory(AbstractFactory):
 
         return self.pkgdata_cache
 
-    def instantiate(self, call_stack=[]):
+    def instantiate(self, call_stack=None):
         """ Return a node instance
 
         :param call_stack: the list of NodeFactory id already in call stack

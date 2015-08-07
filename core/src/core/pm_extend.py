@@ -2,7 +2,7 @@ from fnmatch import fnmatch
 
 from openalea.core.alea import *
 from openalea.core.data import DataFactory
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.core.node import NodeFactory
 
 def get_pm():

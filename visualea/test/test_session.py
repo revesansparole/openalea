@@ -21,7 +21,8 @@ __revision__ = " $Id$ "
 
 
 from openalea.core.pkgmanager import PackageManager
-from openalea.core.compositenode import CompositeNodeFactory, CompositeNode
+from openalea.core.compositenode import CompositeNode
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.visualea.session import Session
 
 import os

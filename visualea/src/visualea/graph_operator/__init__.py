@@ -20,7 +20,7 @@ __revision__ = " $Id$ "
 import weakref
 from openalea.vpltk.qt import qt
 from openalea.core.observer import Observed
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.vpltk.qt.compat import to_qvariant
 
 

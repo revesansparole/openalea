@@ -18,7 +18,7 @@
 #
 ###############################################################################
 
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.core.data import Data
 from openalea.core.model import Model
 from openalea.core.node import Node, AbstractFactory

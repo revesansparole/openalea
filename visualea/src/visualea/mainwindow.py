@@ -34,7 +34,7 @@ from openalea.core import logger
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.settings import Settings,NoSectionError,NoOptionError
 from openalea.core.node_factory import NodeFactory
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 
 from openalea.visualea.node_treeview import NodeFactoryView, NodeFactoryTreeView, PkgModel, CategoryModel
 from openalea.visualea.node_treeview import DataPoolListView, DataPoolModel

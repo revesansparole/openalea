@@ -200,7 +200,7 @@ class AbstractFactory(Observed):
                    "**Authors:** %s\n\n" % self.get_authors() + \
                    "**Description:** %s\n\n" % self.description
 
-    def instantiate(self, call_stack=[]):
+    def instantiate(self, call_stack=None):
         """ Return a node instance
 
         args:
@@ -375,7 +375,7 @@ class NodeFactory(AbstractFactory):
     def get_documentation(self):
         return self.get_classobj().__doc__
 
-    def instantiate(self, call_stack=[]):
+    def instantiate(self, call_stack=None):
         """ Return a node instance
 
         args:

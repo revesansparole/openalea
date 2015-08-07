@@ -142,7 +142,7 @@ class VlabObject(object):
 
     def read_specification(self):
         spec = self.dir / 'specifications'
-        from openalea.core.compositenode import CompositeNodeFactory
+        from openalea.core.compositenode_factory import CompositeNodeFactory
         from openalea.core.compositenode import CompositeNode
 
         f = spec.open()

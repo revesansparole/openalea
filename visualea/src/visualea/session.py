@@ -25,7 +25,7 @@ import os
 import sys
 import weakref
 
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.observer import Observed
 from openalea.visualea.datapool import DataPool

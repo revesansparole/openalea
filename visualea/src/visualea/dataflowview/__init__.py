@@ -25,14 +25,14 @@ import adapter
 from openalea.vpltk.qt import qt
 from openalea.vpltk.qt.compat import to_qvariant
 from openalea.visualea.graph_operator import GraphOperator
-from openalea.core import compositenode, node, node_factory
+from openalea.core import compositenode
 from openalea.core.pkgmanager import PackageManager  # for drag and drop
 from openalea.core.node import RecursionError
 from openalea.core.algo import dataflow_evaluation as evalmodule
 from openalea.grapheditor import qt
 #from openalea.grapheditor import baselisteners, qtgraphview, qtutils
 from openalea.core.node_factory import NodeFactory
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 import openalea.grapheditor.base
 
 
@@ -45,8 +45,8 @@ class DataflowView(qt.View):
         self.__siblings = None
 
         # -- Configure the drop handlers --
-        mimeFormatsMap = {node_factory.NodeFactory.mimetype: self.node_factory_drop_handler,
-                          compositenode.CompositeNodeFactory.mimetype: self.node_factory_drop_handler,
+        mimeFormatsMap = {NodeFactory.mimetype: self.node_factory_drop_handler,
+                          CompositeNodeFactory.mimetype: self.node_factory_drop_handler,
                           "openalea/data_instance": self.node_datapool_drop_handler,
                           "openalealab/model": self.node_model_factory_drop_handler,
                           "openalealab/control": self.node_control_drop_handler,

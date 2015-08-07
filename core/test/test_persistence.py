@@ -23,7 +23,8 @@ import os
 import shutil
 
 from openalea.core.pkgmanager import PackageManager
-from openalea.core.compositenode import CompositeNodeFactory, CompositeNode
+from openalea.core.compositenode import CompositeNode
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.core.node_factory import Factory
 
 

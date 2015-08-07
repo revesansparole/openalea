@@ -31,7 +31,7 @@ from openalea.vpltk.qt import qt
 from openalea.core.node_factory import NodeFactory, AbstractFactory
 from openalea.core.data import DataFactory
 from openalea.core.package import Package, UserPackage
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.pkgmanager import PseudoGroup, PseudoPackage
 

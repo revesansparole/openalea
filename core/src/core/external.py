@@ -7,7 +7,8 @@ from openalea.core.package import Package, UserPackage
 from openalea.core.node import Node
 from openalea.core.node_factory import Factory, NodeFactory, Alias
 from openalea.core.data import DataFactory, PackageData
-from openalea.core.compositenode import CompositeNode, CompositeNodeFactory
+from openalea.core.compositenode import CompositeNode
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.core.interface import *
 
 

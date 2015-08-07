@@ -29,7 +29,7 @@ import sys
 from openalea.oalab.model.visualea import VisualeaModel, VisualeaFile
 from openalea.visualea.graph_operator import GraphOperator
 from openalea.visualea import dataflowview
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.oalab.service.help import display_help
 from openalea.oalab.service.plot import get_plotters
 from openalea.core.service.model import to_model

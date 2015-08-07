@@ -23,7 +23,7 @@ import os
 from subprocess import Popen
 
 from openalea.vpltk.qt import qt
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.core.pkgmanager import PackageManager
 from openalea.core.settings import Settings, get_userpkg_dir
 from openalea.core.interface import *

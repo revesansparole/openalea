@@ -19,7 +19,8 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 from openalea.core.pkgmanager import PackageManager
-from openalea.core.compositenode import CompositeNodeFactory, CompositeNode
+from openalea.core.compositenode import CompositeNode
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.core.node import RecursionError
 from openalea.core import Package
 from openalea.core.path import path

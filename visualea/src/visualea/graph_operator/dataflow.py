@@ -24,7 +24,7 @@ from openalea.visualea.util import open_dialog, exception_display, busy_cursor
 from openalea.visualea.dialogs import NewGraph, FactorySelector
 from openalea.visualea.dialogs import IOConfigDialog
 
-from openalea.core.compositenode import CompositeNodeFactory
+from openalea.core.compositenode_factory import CompositeNodeFactory
 from openalea.core.pkgmanager import PackageManager
 from openalea.core import export_app
 from openalea.core.algo import dataflow_evaluation as evalmodule
