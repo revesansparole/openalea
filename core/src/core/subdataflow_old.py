@@ -21,7 +21,7 @@ __revision__ = " $Id$ "
 
 class SubDataflow(object):
     """ Represents a part of a dataflow for a partial evaluation
-    A SubDataflow is a callable and absracts a part of a dataflow as a funtion
+    A SubDataflow is a callable and abstracts a part of a dataflow as a function
     """
 
     def __init__(self, dataflow, algo, node_id, port_index):
