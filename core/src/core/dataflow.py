@@ -25,7 +25,7 @@ from openalea.core.graph.id_generator import IdGenerator
 from collections import deque
 
 from openalea.core.node import Node  # TODO hack
-from openalea.core.subdataflow import SubDataflow  # TODO hack
+from openalea.core.subdataflow_old import SubDataflow  # TODO hack
 
 class InvalidActor(Exception):
     pass
