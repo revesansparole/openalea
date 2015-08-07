@@ -122,7 +122,7 @@ class DataFactory(AbstractFactory):
         """
 
         node = DataNode(self.get_pkg_data(), self.editors, self.includes)
-        node.factory = self
+        node.set_factory(self)
         return node
 
     def instantiate_widget(self, node=None, parent=None,
@@ -226,11 +226,11 @@ $NAME = DataFactory(name=$PNAME,
 """
 
     def __init__(self, factory):
-        self.factory = factory
+        self.set_factory(factory)
 
     def __repr__(self):
         """ Return the python string representation """
-        f = self.factory
+        f = self.get_factory()
         fstr = string.Template(self.datafactory_template)
         result = fstr.safe_substitute(NAME=f.get_python_name(),
                                       PNAME=repr(f.name),

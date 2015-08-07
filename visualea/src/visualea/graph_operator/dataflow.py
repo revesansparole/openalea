@@ -91,7 +91,7 @@ class DataflowOperators(Base):
         # FIRST WE PREPARE THE USER INTERFACE STUFF
         # ------------------------------------------
         # Get default package id
-        default_factory = graph.factory
+        default_factory = graph.get_factory()
         if(default_factory and default_factory.package):
             pkg_id = default_factory.package.name
             name = default_factory.name + "_grp_" + str(len(default_factory.package))
@@ -119,7 +119,7 @@ class DataflowOperators(Base):
         # Instantiate the new node:
         itemIds = [i.vertex().get_id() for i in items]
         graph.to_factory(factory, itemIds, auto_io=True)
-        newVert = factory.instantiate([graph.factory.get_id()])
+        newVert = factory.instantiate([graph.get_factory().get_id()])
 
         # Evaluate the new connections:
         def evaluate_new_connections(newGraph, newGPos, idList):
@@ -172,7 +172,7 @@ class DataflowOperators(Base):
         factory    = pkg.get_factory("annotation")
 
         realGraph = scene.get_graph()
-        node  = factory.instantiate([realGraph.factory.get_id()])
+        node  = factory.instantiate([realGraph.get_factory().get_id()])
         node.get_ad_hoc_dict().set_metadata("visualStyle", 1)
         scene.add_vertex(node, position=[position.x(), position.y()])
 
@@ -265,7 +265,7 @@ class DataflowOperators(Base):
         #check if no other instance of this factory is opened
         siblings = master.get_siblings()
         for ws in siblings:
-            if graph != ws and graph.factory == ws.factory:
+            if graph != ws and graph.get_factory() == ws.get_factory():
                 res = qt.QtGui.QMessageBox.warning(widget, "Other instances are opened!",
                 """You are trying to save a composite node that has been opened multiple times.
                 Doing this may discard changes done in the other intances.
@@ -276,7 +276,7 @@ class DataflowOperators(Base):
                 else:
                     break
 
-        dialog = FactorySelector(graph.factory, widget)
+        dialog = FactorySelector(graph.get_factory(), widget)
 
         # Display Dialog
         ret = dialog.exec_()
@@ -284,7 +284,7 @@ class DataflowOperators(Base):
         factory = dialog.get_factory()
 
         graph.to_factory(factory, None)
-        graph.factory = factory
+        graph.set_factory(factory)
         graph.set_caption(factory.name)
 
         try:
@@ -406,7 +406,7 @@ class DataflowOperators(Base):
             return
 
         graph = master.get_graph()
-        name  = graph.factory.name
+        name  = graph.get_factory().name
 
         if(graph.graph_modified):
             # Show message
@@ -419,7 +419,7 @@ class DataflowOperators(Base):
                 return
 
         oldGraph = graph
-        newGraph = graph.factory.instantiate()
+        newGraph = graph.get_factory().instantiate()
 
         scene.clear()
         scene.set_graph(newGraph)

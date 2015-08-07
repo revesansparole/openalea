@@ -424,7 +424,7 @@ class NodeFactory(AbstractFactory):
 
         # Properties
         # try:
-        node.factory = self
+        node.set_factory(self)
         node.lazy = self.lazy
         if len(node.caption) == 0:
             node.set_caption(self.name)
@@ -644,11 +644,11 @@ $NAME = Factory(name=$PNAME,
 """
 
     def __init__(self, factory):
-        self.factory = factory
+        self.set_factory(factory)
 
     def __repr__(self):
         """ Return the python string representation """
-        f = self.factory
+        f = self.get_factory()
         fstr = string.Template(self.nodefactory_template)
 
         name = f.get_python_name()

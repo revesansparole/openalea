@@ -181,13 +181,13 @@ class DefaultNodeWidget(NodeWidget, qt.QtGui.QWidget):
 
     @staticmethod
     def do_layout(widget, node, layout):
-        if  node.factory.view is None:
+        if  node.get_factory().view is None:
             # we create the widget in default way
             #print node.input_desc
             for port in node.input_desc:
                 DefaultNodeWidget.place_item(widget, port, layout)
         else:
-            DefaultNodeWidget.place_group(widget, node.factory.view, layout)
+            DefaultNodeWidget.place_group(widget, node.get_factory().view, layout)
 
 
     @staticmethod

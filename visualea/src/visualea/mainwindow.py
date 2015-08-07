@@ -532,7 +532,7 @@ class MainWindow(qt.QtGui.QMainWindow,
         if(type(sender) == type(self.session)):
             if(event and event[0]=="workspace_added"):
                 graph=event[1]
-                self.open_widget_tab(graph, graph.factory)
+                self.open_widget_tab(graph, graph.get_factory())
             else:
                 self.update_tabwidget()
                 self.reinit_treeview()
@@ -581,7 +581,7 @@ class MainWindow(qt.QtGui.QMainWindow,
                 widget = self.tabWorkspace.widget(i)
                 if(node != widget.scene().get_graph()):
                     self.close_tab_workspace(i)
-                    self.open_widget_tab(node, factory=node.factory, pos = i)
+                    self.open_widget_tab(node, factory=node.get_factory(), pos = i)
 
         # close last tabs
         removelist = range( len(self.session.workspaces), self.tabWorkspace.count())

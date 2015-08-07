@@ -123,7 +123,7 @@ class DataflowView(qt.View):
             scene.clearSelection()
             scene.select_added_items(True)
             realGraph = scene.get_graph()
-            node = factory.instantiate([realGraph.factory.get_id()])
+            node = factory.instantiate([realGraph.get_factory().get_id()])
             scene.add_vertex(node, position=pos)
             return node
         except RecursionError:
@@ -135,7 +135,7 @@ class DataflowView(qt.View):
             # -- Check if no other instance of this factory is opened --
         operator = self.get_graph_operator()
         for ws in operator.get_siblings():
-            if factory == ws.factory:
+            if factory == ws.get_factory():
                 res = qt.QtGui.QMessageBox.warning(self, "Other instances are already opened!",
                                                    "You are trying to insert a composite node that has already been opened.\n" +
                                                    "Doing this might cause confusion later on.\n" +

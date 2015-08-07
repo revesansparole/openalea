@@ -306,7 +306,7 @@ class ModelNodeFactory(AbstractFactory):
 
             # Properties
             try:
-                node.factory = self
+                node.set_factory(self)
                 node.lazy = self.lazy
                 if(not node.caption):
                     node.set_caption(self.name)
@@ -349,11 +349,11 @@ $NAME = ModelFactory(name=$PNAME,
 """
 
     def __init__(self, factory):
-        self.factory = factory
+        self.set_factory(factory)
 
     def __repr__(self):
         """ Return the python string representation """
-        f = self.factory
+        f = self.get_factory()
         fstr = string.Template(self.nodefactory_template)
 
         result = fstr.safe_substitute(NAME=repr(f.name),

@@ -94,7 +94,7 @@ class VertexOperators(Base):
         item = master.get_vertex_item()
         vertex = item.vertex()
         vwidget = item.get_editor_instance()
-        if(vwidget):
+        if vwidget is not None:
             if(vwidget.isVisible()):
                 vwidget.raise_()
                 vwidget.activateWindow()
@@ -107,9 +107,10 @@ class VertexOperators(Base):
         # THIS IS NOT DESIRED BECAUSE IT COUPLES THE MODEL
         # TO THE UI.
         factory = vertex.get_factory()
-        if(not factory):
+        if factory is None:
             return
         innerWidget = factory.instantiate_widget(vertex, None)
+
         if(not innerWidget):
             return
         if (innerWidget.is_empty()):
@@ -166,7 +167,7 @@ class VertexOperators(Base):
         # Reload package
         master = self.master
         vItem = master.get_vertex_item()
-        factory = vItem.vertex().factory
+        factory = vItem.vertex().get_factory()
         package = factory.package
         if(package):
             package.reload()

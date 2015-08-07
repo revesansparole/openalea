@@ -822,7 +822,7 @@ class NodeFactoryView(object):
         if(isinstance(obj, CompositeNodeFactory)):
             session = self.main_win().session
             for ws in session.workspaces:
-                if obj == ws.factory:
+                if obj == ws.get_factory():
                     res = qt.QtGui.QMessageBox.warning(self.main_win(), "Other instances are already opened!",
                                                     """You are trying to open a composite node that has already been opened.
 Doing this might cause confusion later on.

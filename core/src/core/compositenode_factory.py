@@ -140,7 +140,7 @@ class CompositeNodeFactory(AbstractFactory):
         call_stack.append(self.get_id())
 
         new_df = CompositeNode(self.inputs, self.outputs)
-        new_df.factory = self
+        new_df.set_factory(self)
         new_df.__doc__ = self.doc
         new_df.set_caption(self.get_id())
         new_df.eval_algo = self.eval_algo
@@ -414,7 +414,7 @@ $NAME = CompositeNodeFactory(name=$PNAME,
 """
 
     def __init__(self, factory):
-        self.factory = factory
+        self.set_factory(factory)
 
     def pprint_repr(self, obj, indent=3):
         """ Pretty print repr """
@@ -423,7 +423,7 @@ $NAME = CompositeNodeFactory(name=$PNAME,
     def __repr__(self):
         """ Return the python string representation """
 
-        f = self.factory
+        f = self.get_factory()
         fstr = string.Template(self.sgfactory_template)
 
         name = f.get_python_name()
@@ -451,7 +451,7 @@ $NAME = CompositeNodeFactory(name=$PNAME,
 
 class JSONCNFactoryWriter(PyCNFactoryWriter):
     def __repr__(self):
-        f = self.factory
+        f = self.get_factory()
 
         # minx = min(f.elt_ad_hoc.itervalues(),
         #            key=lambda x: x["position"][0])["position"][0]

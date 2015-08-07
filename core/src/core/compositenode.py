@@ -211,7 +211,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
             eid = DataFlow.connect(self, source_pid, target_pid)
         except:
             logger.error("Enable to create the edge %s %d %d %d %d" % (
-            self.factory.name, src_id, port_src, dst_id, port_dst))
+            self.get_factory().name, src_id, port_src, dst_id, port_dst))
             return
 
         self.actor(dst_id).set_input_state(port_dst, "connected")
@@ -598,8 +598,8 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
             elif (vid == self.id_out):
                 vid = "__out__"
             else:
-                pkg_id = node.factory.package.get_id()
-                factory_id = node.factory.get_id()
+                pkg_id = node.get_factory().package.get_id()
+                factory_id = node.get_factory().get_id()
                 sgfactory.elt_factory[vid] = (pkg_id, factory_id)
 
             # Copy internal data
@@ -630,7 +630,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
 
         # Set node factory if all node have been exported
         if (listid is None):
-            self.factory = sgfactory
+            self.set_factory(sgfactory)
 
     def notify_vertex_addition(self, vertex, vid=None):  # TODO: WTF!! always notify and let listeners choose
         vtype = "vertex"

@@ -50,7 +50,7 @@ class GraphAdapter(grapheditorbase.GraphAdapterBase):
         return self.graph().invalidate()
         
     def get_factory(self):
-        return self.graph().factory
+        return self.graph().get_factory()
         
     def to_factory(self, factory, itemIds, auto_io=True):
         return self.graph().to_factory(factory, itemIds, auto_io)

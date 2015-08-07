@@ -119,7 +119,7 @@ class Provenance(object):
 
 class PrintProvenance(Provenance):
     def workflow_exec(self, *args):
-        print 'Workflow execution ', self.workflow.factory.name
+        print 'Workflow execution ', self.workflow.get_factory().name
     def node_exec(self, vid, node, start_time, end_time, *args):
         provenance(vid, node, start_time, end_time)
 
@@ -132,8 +132,8 @@ def provenance(vid, node, start_time, end_time):
     if PROVENANCE:
         cur = db_connexion()
 
-        pname = node.factory.package.name
-        name = node.factory.name
+        pname = node.get_factory().package.name
+        name = node.get_factory().name
 
         print "Provenance Process:"
         print "instance ID ", vid, "Package Name: ",pname, "Name: ", name
@@ -1079,7 +1079,7 @@ class SciFlowareEvaluation(AbstractEvaluation):
     @staticmethod
     def is_operator(actor):
         from openalea.scifloware.operator import algebra
-        factory = actor.factory
+        factory = actor.get_factory()
         if factory is None:
             return False
         if 'SciFloware' not in factory.package.name:
@@ -1147,7 +1147,7 @@ class SciFlowareEvaluation(AbstractEvaluation):
                     raise Exception('Too many nodes connected to the SciFloware operator.')
                 elif nb_out == 1:
                     out_actor = df.actor(df.vertex(out_ports[0]))
-                    dataflow_name = out_actor.factory.package.name+':'+out_actor.factory.name
+                    dataflow_name = out_actor.get_factory().package.name+':'+out_actor.get_factory().name
                     actor.set_input(df.local_id(pid), dataflow_name)
             else:
                 cpt = 0
