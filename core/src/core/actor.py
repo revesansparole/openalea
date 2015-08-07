@@ -4,7 +4,7 @@
 #
 #       Copyright 2006-2009 INRIA - CIRAD - INRA
 #
-#       File author(s): Jerome Chopard <jerome.chopard@sophia.inria.fr>
+#       File author(s): Jerome Chopard <revesansparole@gmail.com>
 #
 #       Distributed under the Cecill-C License.
 #       See accompanying file LICENSE.txt or copy at
@@ -22,7 +22,7 @@ class IActor(object):
     """Interface to emulate a function
 
     The class :class:`IActor` implements an interface to emulate a function.
-    It has functions to :func:`inputs` and :func:`outputs`.
+    It has functions to access :func:`inputs` and :func:`outputs`.
 
     :Examples:
 
@@ -31,14 +31,14 @@ class IActor(object):
 
     """
 
-    def inputs(self):
+    def input_descriptions(self):
         """Iterates on all input descriptions
 
         :Returns: iter of (input key, input interface)
         """
         raise NotImplementedError
 
-    def outputs(self):
+    def output_descriptions(self):
         """Iterates on all output descriptions
 
         :Returns: iter of (output key, output interface)

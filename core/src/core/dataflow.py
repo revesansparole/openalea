@@ -355,11 +355,11 @@ class DataFlow(PropertyGraph):
         if actor is not None:
             if not isinstance(actor, Node):  # TODO: hack
                 # test actor inputs vs vertex in ports
-                for key, interface in actor.inputs():
+                for key, interface in actor.input_descriptions():
                     pid = self.in_port(vid, key)
 
                 # test actor outputs vs vertex out ports
-                for key, interface in actor.outputs():
+                for key, interface in actor.output_descriptions():
                     pid = self.out_port(vid, key)
 
             # set actor
@@ -384,10 +384,10 @@ class DataFlow(PropertyGraph):
         vid = self.add_vertex(vid)
 
         try:
-            for key, interface in actor.inputs():
+            for key, interface in actor.input_descriptions():
                 self.add_in_port(vid, key)
 
-            for key, interface in actor.outputs():
+            for key, interface in actor.output_descriptions():
                 self.add_out_port(vid, key)
         except AttributeError:
             raise InvalidActor("actor does not verify IActor interface")

@@ -18,11 +18,11 @@ class DummyActor(IActor):
         """
         print vid
 
-    def inputs(self):
+    def input_descriptions(self):
         for i in range(4):
             yield "in%d" % i, None
 
-    def outputs(self):
+    def output_descriptions(self):
         for i in range(3):
             yield "out%d" % i, None
 
@@ -310,10 +310,10 @@ def test_dataflow_actor():
     actor = DummyActor()
     assert_raises(PortError, lambda: df.set_actor(vid, actor))
 
-    for key, interface in actor.inputs():
+    for key, interface in actor.input_descriptions():
         df.add_in_port(vid, key)
 
-    for key, interface in actor.outputs():
+    for key, interface in actor.output_descriptions():
         df.add_out_port(vid, key)
 
     df.set_actor(vid, actor)
@@ -331,10 +331,10 @@ def test_dataflow_set_actor():
     assert df.actor(vid) is None
     assert_raises(PortError, lambda: df.set_actor(vid, actor))
 
-    for key, interface in actor.inputs():
+    for key, interface in actor.input_descriptions():
         df.add_in_port(vid, key)
 
-    for key, interface in actor.outputs():
+    for key, interface in actor.output_descriptions():
         df.add_out_port(vid, key)
 
     df.set_actor(vid, actor)
@@ -352,10 +352,10 @@ def test_dataflow_add_actor():
     assert_raises(InvalidActor, lambda: df.add_actor(None))
     assert_raises(IndexError, lambda: df.add_actor(actor, vid1))
 
-    for key, interface in actor.inputs():
+    for key, interface in actor.input_descriptions():
         df.add_in_port(vid1, key)
 
-    for key, interface in actor.outputs():
+    for key, interface in actor.output_descriptions():
         df.add_out_port(vid1, key)
 
     df.set_actor(vid1, actor)
@@ -363,8 +363,10 @@ def test_dataflow_add_actor():
 
     vid2 = df.add_actor(actor)
     assert df.actor(vid2) == actor
-    assert len(tuple(actor.inputs())) == len(tuple(df.in_ports(vid2)))
-    assert len(tuple(actor.outputs())) == len(tuple(df.out_ports(vid2)))
+    nb = len(tuple(df.in_ports(vid2)))
+    assert len(tuple(actor.input_descriptions())) == nb
+    nb = len(tuple(df.out_ports(vid2)))
+    assert len(tuple(actor.output_descriptions())) == nb
 
 
 def test_dataflow_add_in_port():
