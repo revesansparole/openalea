@@ -192,7 +192,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
 
         DataFlow.remove_edge(self, eid)
         if port is not None:
-            self.actor(port._vid).set_input_state(port._local_pid,
+            self.actor(port.vid).set_input_state(port.local_pid,
                                                   "disconnected")
         self.notify_listeners(("edge_removed", ("default", eid)))
 
