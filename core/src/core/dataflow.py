@@ -527,6 +527,7 @@ class DataFlow(PropertyGraph):
     clear.__doc__ = PropertyGraph.clear.__doc__
 
     # def get_all_parent_nodes(self, vid):  # TODO: usefull??
+    # TODO: actually is used by set_continuous_eval de composite node
     #     """ Return an iterator of vextex id corresponding to all the
     #     parent node of vid"""
     #

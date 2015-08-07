@@ -43,7 +43,7 @@ quantify = False
 #     pass
 
 
-class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataflow
+class CompositeNode(Node):
     """ A CompositeNode is a container that interconnects
     different node instances between them in directed graph.
     """
@@ -60,8 +60,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         .. note::
             if IO names are not a string, they will be converted with str()
         """
-        DataFlow.__init__(self)
-
+        self._dataflow = DataFlow()
         self.id_in = None
         self.id_out = None
         Node.__init__(self, inputs, outputs)
@@ -73,7 +72,16 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
 
     def node(self, vid):  # TODO: change dataflow instead???
         """ Convenience function """
-        return self.actor(vid)
+        return self._dataflow.actor(vid)
+
+    def __len__ (self):
+        return len(self._dataflow)
+
+    def nodes (self):
+        return self._dataflow.vertices()
+
+    def edges (self):
+        return self._dataflow.edges()
 
     def copy_to(self, other):
         raise NotImplementedError
@@ -81,8 +89,8 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
     def close(self):
         """ Close all nodes.
         """
-        for vid in set(self.vertices()):
-            node = self.actor(vid)
+        for vid in set(self._dataflow.vertices()):
+            node = self._dataflow.actor(vid)
             node.close()
         Node.close(self)
 
@@ -91,8 +99,8 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         """
         Node.reset(self)
 
-        for vid in set(self.vertices()):
-            node = self.actor(vid)
+        for vid in set(self._dataflow.vertices()):
+            node = self._dataflow.actor(vid)
             node.reset()
 
     def invalidate(self):
@@ -100,8 +108,8 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         """
         Node.invalidate(self)
 
-        for vid in set(self.vertices()):
-            node = self.actor(vid)
+        for vid in set(self._dataflow.vertices()):
+            node = self._dataflow.actor(vid)
             node.invalidate()
 
     def get_eval_algo(self):
@@ -119,11 +127,11 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
                                 locals(),
                                 [algo])
             classobj = getattr(module, algo)
-            return classobj(self)
+            return classobj(self._dataflow)
 
         except ImportError:
             from  openalea.core.algo.dataflow_evaluation import DefaultEvaluation
-            return DefaultEvaluation(self)
+            return DefaultEvaluation(self._dataflow)
 
     def add_node(self, node, vid=None, modify=True):  # TODO: WTF!! argument modify
         """ Add a node in the dataflow with a particular id
@@ -139,7 +147,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         return:
             - (vid): id of vertex created
         """
-        vid = self.add_vertex(vid)
+        vid = self._dataflow.add_vertex(vid)
         # vid = self.add_actor(node, vid)
 
         # -- NOOOOOO THE UGLY BACK REFERENCE --
@@ -147,12 +155,12 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
 
         node.set_id(vid)
         for local_pid in xrange(node.get_nb_input()):
-            self.add_in_port(vid, local_pid)
+            self._dataflow.add_in_port(vid, local_pid)
 
         for local_pid in xrange(node.get_nb_output()):
-            self.add_out_port(vid, local_pid)
+            self._dataflow.add_out_port(vid, local_pid)
 
-        self.set_actor(vid, node)
+        self._dataflow.set_actor(vid, node)
         self.notify_vertex_addition(node, vid)
 
         if modify:
@@ -172,7 +180,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
             self.id_in = None
         elif vid == self.id_out:
             self.id_out = None
-        self.remove_vertex(vid)
+        self._dataflow.remove_vertex(vid)
         node.close()
         self.notify_vertex_removal(node)
         self.notify_listeners(("graph_modified",))
@@ -184,15 +192,15 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         args:
             - eid (eid): id of edge to remove.
         """
-        target = self.target(eid)
-        try:
-            port = self.port(target)
-        except PortError:  # TODO: why??? in which case this happen
-            port = None
+        target = self._dataflow.target(eid)
+        # try:
+        port = self._dataflow.port(target)
+        # except PortError:  # TODO: why??? in which case this happen
+        #     port = None
 
-        DataFlow.remove_edge(self, eid)
-        if port is not None:
-            self.actor(port.vid).set_input_state(port.local_pid,
+        self._dataflow.remove_edge(eid)
+        # if port is not None:
+        self.node(port.vid).set_input_state(port.local_pid,
                                                   "disconnected")
         self.notify_listeners(("edge_removed", ("default", eid)))
 
@@ -206,21 +214,21 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         """
 
         try:
-            source_pid = self.out_port(src_id, port_src)
-            target_pid = self.in_port(dst_id, port_dst)
-            eid = DataFlow.connect(self, source_pid, target_pid)
+            source_pid = self._dataflow.out_port(src_id, port_src)
+            target_pid = self._dataflow.in_port(dst_id, port_dst)
+            eid = self._dataflow.connect(source_pid, target_pid)
         except:
             logger.error("Enable to create the edge %s %d %d %d %d" % (
             self.get_factory().name, src_id, port_src, dst_id, port_dst))
             return
 
-        self.actor(dst_id).set_input_state(port_dst, "connected")
+        self.node(dst_id).set_input_state(port_dst, "connected")
         self.notify_listeners(("connection_modified",))
         self.graph_modified = True
 
         self.update_eval_listeners(src_id)
 
-        src_port = self.node(src_id).output_desc[port_src]
+        src_port = self.node(src_id).output_desc[port_src]  # TODO: do not access list directly
         dst_port = self.node(dst_id).input_desc[port_dst]
         edgedata = "default", eid, src_port, dst_port
 
@@ -292,25 +300,28 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         """
         import time
         t0 = time.time()
-        if (self.evaluating):
+        if self.evaluating:  # TODO: fuck it, hadhoc gestion of multi threads!
             return
-        if (vtx_id != None):
+
+        if vtx_id is not None:
             self.node(vtx_id).modified = True
+
         algo = self.get_eval_algo()
 
         try:
             self.evaluating = True
+
             # TODO: HACK to switch to new eval algo
             if isinstance(algo, (BruteEvaluation, LazyEvaluation)):
                 print "hack EVAL"
                 # create new state
-                state = DataflowState(self)
+                state = DataflowState(self._dataflow)
 
                 # fill lonely input ports
-                for pid in self.in_ports():
-                    if self.nb_connections(pid) == 0:
-                        node = self.actor(self.vertex(pid))
-                        lpid = self.local_id(pid)
+                for pid in self._dataflow.in_ports():
+                    if self._dataflow.nb_connections(pid) == 0:
+                        node = self.node(self._dataflow.vertex(pid))
+                        lpid = self._dataflow.local_id(pid)
                         val = node.inputs[lpid]
                         state.set_data(pid, val)
 
@@ -319,15 +330,16 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
                 algo.eval(env, state, vtx_id)
 
                 # copy data back in nodes
-                for pid in self.out_ports():
-                    node = self.actor(self.vertex(pid))
-                    lpid = self.local_id(pid)
+                for pid in self._dataflow.out_ports():
+                    node = self.node(self._dataflow.vertex(pid))
+                    lpid = self._dataflow.local_id(pid)
                     val = state.get_data(pid)
                     node.set_output(lpid, val)
-            else:
+            else:  # old algos
                 algo.eval(vtx_id, step=step)
         finally:
             self.evaluating = False
+
         t1 = time.time()
         if quantify:
             logger.info('Evaluation time: %s' % (t1 - t0))
@@ -339,7 +351,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         """
         Evaluate the graph
 
-        Return True if the node need a reevaluation (like generator)
+        Return True if the node needs a reevaluation (like generator)
         """
         self.__call__()
 
@@ -353,7 +365,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         Evaluate the graph
         """
 
-        if (self.id_out and self.get_nb_output() > 0):
+        if self.id_out and self.get_nb_output() > 0:
             self.eval_as_expression(self.id_out)
         else:
             self.eval_as_expression(None)
@@ -363,9 +375,10 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
     def to_script(self):
         """Translate the dataflow into a python script.
         """
-        from algo.dataflow_evaluation import ToScriptEvaluation
-        algo = ToScriptEvaluation(self)
-        return algo.eval()
+        raise DeprecationWarning()
+        # from algo.dataflow_evaluation import ToScriptEvaluation
+        # algo = ToScriptEvaluation(self)
+        # return algo.eval()
 
     def compute_external_io(self, vertex_selection, new_vid):  # TODO: too ad hoc, remove
         """
@@ -398,23 +411,23 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         connections = []
         selected_port = {}
         if is_input:
-            ports = self.in_ports
-            get_vertex_io = self.source
-            get_my_vertex = self.target
+            ports = self._dataflow.in_ports
+            get_vertex_io = self._dataflow.source
+            get_my_vertex = self._dataflow.target
         else:
-            ports = self.out_ports
-            get_vertex_io = self.target
-            get_my_vertex = self.source
+            ports = self._dataflow.out_ports
+            get_vertex_io = self._dataflow.target
+            get_my_vertex = self._dataflow.source
 
         # For each selected vertices
         for vid in vertex_selection:
             for pid in ports(vid):
-                connected_edges = self.connected_edges(pid)
+                connected_edges = self._dataflow.connected_edges(pid)
 
                 for e in connected_edges:
                     s = get_vertex_io(e)
                     if s not in vertex_selection:
-                        pname = self.local_id(pid)
+                        pname = self._dataflow.local_id(pid)
                         selected_port.setdefault((vid, pname), []).append(e)
 
         for edge in new_connections:
@@ -425,8 +438,8 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
                 if (target_id, target_port) in selected_port:
                     target_edges = selected_port[(target_id, target_port)]
                     for e in target_edges:
-                        vid = self.source(e)
-                        port_id = self.local_id(self.source_port(e))
+                        vid = self._dataflow.source(e)
+                        port_id = self._dataflow.local_id(self._dataflow.source_port(e))
                         connections.append((vid, port_id, new_vid, edge[1]))
             else:
                 if (edge[2] != '__out__'):
@@ -436,8 +449,8 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
                 if (source_id, source_port) in selected_port:
                     source_edges = selected_port[(source_id, source_port)]
                     for e in source_edges:
-                        vid = self.target(e)
-                        port_id = self.local_id(self.target_port(e))
+                        vid = self._dataflow.target(e)
+                        port_id = self._dataflow.local_id(self._dataflow.target_port(e))
                         connections.append((new_vid, edge[3], vid, port_id))
 
         return connections
@@ -457,18 +470,18 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         name_port = []
 
         if is_input:
-            ports = self.in_ports
-            get_vertex_io = self.source
+            ports = self._dataflow.in_ports
+            get_vertex_io = self._dataflow.source
             io_desc = lambda n: n.input_desc
         else:
-            ports = self.out_ports
-            get_vertex_io = self.target
+            ports = self._dataflow.out_ports
+            get_vertex_io = self._dataflow.target
             io_desc = lambda n: n.output_desc
 
         # For each input port
         for vid in vertex_selection:
             for pid in ports(vid):
-                connected_edges = list(self.connected_edges(pid))
+                connected_edges = list(self._dataflow.connected_edges(pid))
 
                 is_io = False
                 for e in connected_edges:
@@ -480,7 +493,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
                     if not is_io:
                         continue
 
-                pname = self.local_id(pid)
+                pname = self._dataflow.local_id(pid)
                 n = self.node(vid)
                 desc = dict(io_desc(n)[pname])
 
@@ -562,13 +575,13 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
             sup_connect = []
 
         if listid is None:
-            listid = set(self.vertices())
+            listid = set(self._dataflow.vertices())
 
         # Copy Connections
-        for eid in self.edges():
+        for eid in self._dataflow.edges():
 
-            src = self.source(eid)
-            tgt = self.target(eid)
+            src = self._dataflow.source(eid)
+            tgt = self._dataflow.target(eid)
 
             if ((src not in listid) or (tgt not in listid)):
                 continue
@@ -577,8 +590,8 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
             if (tgt == self.id_out):
                 tgt = '__out__'
 
-            source_port = self.local_id(self.source_port(eid))
-            target_port = self.local_id(self.target_port(eid))
+            source_port = self._dataflow.local_id(self._dataflow.source_port(eid))
+            target_port = self._dataflow.local_id(self._dataflow.target_port(eid))
             sgfactory.connections[id(eid)] = \
                 (src, source_port, tgt, target_port)
 
@@ -589,7 +602,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         # Copy node
         for vid in listid:
 
-            node = self.actor(vid)
+            node = self.node(vid)
             kdata = node.internal_data
 
             # Do not copy In and Out
@@ -701,15 +714,15 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         :param port_dst: destination input port number
         """
 
-        source_pid = self.out_port(src_id, port_src)
-        target_pid = self.in_port(dst_id, port_dst)
+        source_pid = self._dataflow.out_port(src_id, port_src)
+        target_pid = self._dataflow.in_port(dst_id, port_dst)
 
-        for eid in self.connected_edges(source_pid):
+        for eid in self._dataflow.connected_edges(source_pid):
 
-            if self.target_port(eid) == target_pid:
+            if self._dataflow.target_port(eid) == target_pid:
                 self.notify_listeners(("edge_removed", ("default", eid)))
                 self.remove_edge(eid)
-                self.actor(dst_id).set_input_state(port_dst, "disconnected")
+                self.node(dst_id).set_input_state(port_dst, "disconnected")
                 self.notify_listeners(("connection_modified",))
                 self.graph_modified = True
 
@@ -742,7 +755,7 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
             - vid (vid): id of node
             - state (bool) default True: continuous evaluation
         """
-        node = self.actor(vid)
+        node = self.node(vid)
 
         if not node.user_application and not state:
             return
@@ -761,8 +774,8 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
             node.continuous_listener = listener
 
             # Add node as observed in all parent node
-            for v in self.get_all_parent_nodes(vid):
-                n = self.actor(v)
+            for v in self.get_all_parent_nodes(vid):  # TODO: deprecated
+                n = self.node(v)
                 n.continuous_eval.register_listener(listener)
 
     def update_eval_listeners(self, vid):
@@ -772,11 +785,11 @@ class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataf
         src_node.continuous_eval.listeners.clear()
 
         # For each output
-        for pid in self.out_ports(vid):
+        for pid in self._dataflow.out_ports(vid):
 
             # For each connected node
-            for npid in self.connected_ports(pid):
-                dst_id = self.vertex(npid)
+            for npid in self._dataflow.connected_ports(pid):
+                dst_id = self._dataflow.vertex(npid)
 
                 dst_node = self.node(dst_id)
                 listeners = dst_node.continuous_eval.listeners

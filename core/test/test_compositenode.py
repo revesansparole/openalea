@@ -108,7 +108,7 @@ class TestClass:
 
         sg2 = sgfactory.instantiate()
 
-        assert len(list(sg2.vertices()))==2+2 # two nodes + in/ou
+        assert len(list(sg2.nodes()))==2+2 # two nodes + in/ou
         assert len(list(sg2.edges()))==1
 
         sg2.node(e1).set_input(0, 3.)
