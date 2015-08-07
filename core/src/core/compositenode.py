@@ -385,7 +385,8 @@ class CompositeNode(Node):
         else:
             self.eval_as_expression(None)
 
-        return ()
+        # return ()
+        return tuple(self.get_output(k) for k in range(self.get_nb_output()))
 
     def to_script(self):
         """Translate the dataflow into a python script.
