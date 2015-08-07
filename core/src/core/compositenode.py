@@ -153,6 +153,8 @@ class CompositeNode(Node, DataFlow):
         """ Return the evaluation algo instance """
         try:
             algo_str = self.eval_algo
+            if algo_str == "default":
+                algo_str = "LambdaEvaluation"  # TODO, hack use dataflow_evaluation.default instead
 
             algo_str = algo_str.strip('"');
             algo_str = algo_str.strip("'")
