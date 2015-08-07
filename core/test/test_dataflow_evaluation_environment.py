@@ -26,6 +26,9 @@ def test_evaluation_environment_new_execution():
     df = DataFlow()
     env = EvaluationEnvironment()
 
+    env.new_execution()
+    assert env.current_execution() is None
+
     env.set_provenance(df)
     env.new_execution()
     eid = env.current_execution()

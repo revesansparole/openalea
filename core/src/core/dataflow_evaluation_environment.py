@@ -44,7 +44,8 @@ class EvaluationEnvironment(object):
         arg:
             - exec_id (eid): id of parent execution
         """
-        self._exec_id = self._prov.new_execution(exec_id)
+        if self._prov is not None:
+            self._exec_id = self._prov.new_execution(exec_id)
 
     def record_provenance(self):
         """ Return wether or not execution provenance

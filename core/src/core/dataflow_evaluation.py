@@ -44,6 +44,11 @@ class AbstractEvaluation(object):
         """
         self._dataflow = dataflow
 
+    def dataflow(self):
+        """ Testing purpose, retrieve associated dataflow
+        """
+        return self._dataflow
+
     def require_evaluation(self):
         """ Return True if the associated dataflow need to be evaluated.
         """

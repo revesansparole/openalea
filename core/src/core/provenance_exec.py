@@ -110,13 +110,15 @@ class ProvenanceExec(object):
             - state (DataFlowState): newly created if state is None or
                                      use state but clear it first.
         """
+        dp, dv = self._stored[exec_id]
+
         if state is None:
             state = DataflowState(self.dataflow())
         else:
             assert state.dataflow() == self.dataflow()
 
         state.clear()
-        dp, dv = self._stored[exec_id]
+
         for pid, (changed, data) in dp.items():
             state.set_data(pid, data)
             state.set_changed(pid, changed)
