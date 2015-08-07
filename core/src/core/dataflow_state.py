@@ -73,6 +73,15 @@ class DataflowState(object):
         self._state.update(save)
         self._changed.update(save_ch)
 
+    def update(self, other):
+        """ Update content of this state with values
+        contained in other.
+
+        args:
+            - other (DataflowState): values to copy
+        """
+        raise NotImplementedError()
+
     def is_ready_for_evaluation(self):
         """ Test wether the state contains enough information
         to evaluate the associated dataflow.

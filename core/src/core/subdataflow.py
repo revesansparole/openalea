@@ -60,6 +60,25 @@ class SubDataflow2(object):
             if self.has_edge(eid):
                 yield eid
 
+    def out_edges(self, vid):
+        if not self.has_vertex(vid):
+            raise InvalidVertex("vertex not in view")
+
+        for eid in self._dataflow.out_edges(vid):
+            if self.has_edge(eid):
+                yield eid
+
+    def nb_out_edges(self, vid):
+        return len(tuple(self.out_edges(vid)))
+
+    def in_neighbors(self, vid):
+        if not self.has_vertex(vid):
+            raise InvalidVertex("vertex not in view")
+
+        for nid in self._dataflow.in_neighbors(vid):
+            if self.has_vertex(nid):
+                yield nid
+
     def source_port(self, eid):
         if self.has_edge(eid):
             return self._dataflow.source_port(eid)
@@ -95,6 +114,15 @@ class SubDataflow2(object):
         for pid in self._dataflow.out_ports(vid):
             if self.has_port(pid):
                 yield pid
+
+    def is_in_port(self, pid):
+        return self._dataflow.is_in_port(pid)
+
+    def is_out_port(self, pid):
+        return self._dataflow.is_out_port(pid)
+
+    def vertex(self, pid):
+        return self._dataflow.vertex(pid)
 
     def connected_edges(self, pid):
         if not self.has_port(pid):

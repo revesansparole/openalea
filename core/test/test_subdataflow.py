@@ -79,6 +79,14 @@ def test_subdataflow_edges():
     assert set(sub.edges()) == {eid1}
 
 
+def test_subdataflow_out_edges():
+    assert False
+
+
+def test_subdataflow_in_neighbors():
+    assert False
+
+
 def test_subdataflow_port():
     df, pids, eids, vids = get_df()
     pid11, pid21, pid31, pid32, pid33, pid41 = pids
@@ -195,6 +203,9 @@ def test_subdataflow_mirror_functions():
     vid1, vid2, vid3, vid4 = vids
 
     sub = SubDataflow2(df, (vid1, vid3))
+    assert sub.is_in_port(pid31)
+    assert sub.is_out_port(pid11)
+    assert sub.vertex(pid11) == vid1
     assert sub.port(pid11) == df.port(pid11)
     assert sub.local_id(pid11) == df.local_id(pid11)
     assert sub.in_port(vid3, "in1") == df.in_port(vid3, "in1")

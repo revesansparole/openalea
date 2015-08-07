@@ -81,6 +81,10 @@ def test_dataflow_state_reinit_with_changed():
     assert not dfs.has_changed(pid10)
 
 
+def test_dataflow_state_update():
+    assert False
+
+
 def test_dataflow_state_is_ready_for_evaluation():
     df, vids, pids = get_dataflow()
     pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
