@@ -24,8 +24,6 @@ modified in a dataflow.
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-import string
-import pprint
 import copy
 
 from openalea.core.dataflow_evaluation import BruteEvaluation, LazyEvaluation
@@ -33,13 +31,8 @@ from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
 from openalea.core.dataflow_state import DataflowState
 
 from openalea.core.node import RecursionError, Node
-from openalea.core.node_factory import AbstractFactory
-from openalea.core.node_port import AbstractPort
-from openalea.core.pkgmanager import PackageManager, UnknownPackageError
-from openalea.core.package import UnknownNodeError
 from openalea.core.dataflow import DataFlow, InvalidEdge, PortError
-from openalea.core.settings import Settings
-from openalea.core.metadatadict import MetaDataDict
+
 import logger
 
 quantify = False
@@ -50,40 +43,52 @@ quantify = False
 #     pass
 
 
-class CompositeNode(Node, DataFlow):
-    """
-    The CompositeNode is a container that interconnect
+class CompositeNode(Node, DataFlow):  # TODO: does not have to derive from dataflow
+    """ A CompositeNode is a container that interconnects
     different node instances between them in directed graph.
     """
 
     mimetype = "openalea/compositenode"
 
     def __init__(self, inputs=(), outputs=()):
-        """ Inputs and outputs are list of
-        dict(name='', interface='', value='') """
+        """ Constructor
 
+        args:
+            - inputs (list of dict(name='X', interface=IFloat, value=0) )
+            - outputs (list of dict(name='X', interface=IFloat) )
+
+        .. note::
+            if IO names are not a string, they will be converted with str()
+        """
         DataFlow.__init__(self)
 
         self.id_in = None
         self.id_out = None
         Node.__init__(self, inputs, outputs)
+
         # graph modification status
         self.graph_modified = False
         self.evaluating = False
         self.eval_algo = None
 
+    def node(self, vid):  # TODO: change dataflow instead???
+        """ Convenience function """
+        return self.actor(vid)
+
     def copy_to(self, other):
         raise NotImplementedError
 
     def close(self):
+        """ Close all nodes.
+        """
         for vid in set(self.vertices()):
             node = self.actor(vid)
             node.close()
         Node.close(self)
 
     def reset(self):
-        """ Reset nodes """
-
+        """ Reset all nodes.
+        """
         Node.reset(self)
 
         for vid in set(self.vertices()):
@@ -91,46 +96,176 @@ class CompositeNode(Node, DataFlow):
             node.reset()
 
     def invalidate(self):
-        """ Invalidate nodes """
-
+        """ Invalidate all nodes.
+        """
         Node.invalidate(self)
 
         for vid in set(self.vertices()):
             node = self.actor(vid)
             node.invalidate()
 
-    def set_io(self, inputs, outputs):
+    def get_eval_algo(self):
+        """ Return an instance of the evaluation algorithm
+        associated with this composite node.
         """
-        Define inputs and outputs
+        try:
+            algo = self.eval_algo.strip('"').strip("'")
+            if algo is None or algo == "default":
+                algo = "LambdaEvaluation"  # TODO, hack use dataflow_evaluation.default instead
+
+            # import module
+            module = __import__("algo.dataflow_evaluation",
+                                globals(),
+                                locals(),
+                                [algo])
+            classobj = getattr(module, algo)
+            return classobj(self)
+
+        except ImportError:
+            from  openalea.core.algo.dataflow_evaluation import DefaultEvaluation
+            return DefaultEvaluation(self)
+
+    def add_node(self, node, vid=None, modify=True):  # TODO: WTF!! argument modify
+        """ Add a node in the dataflow with a particular id
+        if id is None, auto generate one
+
+        args:
+            - node (Node): instance of node to add
+            - vid (vid), default None: id of vertex to use in the dataflow
+                                       if None a new one will be created
+            - modify (bool), default True: flag to tell that the composite
+                                       node has been modified
+
+        return:
+            - (vid): id of vertex created
+        """
+        vid = self.add_vertex(vid)
+        # vid = self.add_actor(node, vid)
+
+        # -- NOOOOOO THE UGLY BACK REFERENCE --
+        node.set_compositenode(self)  # TODO: GRUUIK to remove
+
+        node.set_id(vid)
+        for local_pid in xrange(node.get_nb_input()):
+            self.add_in_port(vid, local_pid)
+
+        for local_pid in xrange(node.get_nb_output()):
+            self.add_out_port(vid, local_pid)
+
+        self.set_actor(vid, node)
+        self.notify_vertex_addition(node, vid)
+
+        if modify:
+            self.notify_listeners(("graph_modified",))
+            self.graph_modified = True
+
+        return vid
+
+    def remove_node(self, vid):
+        """ Remove a node from the graph.
+
+        args:
+            - vid (vid): id of vertex to remove.
+        """
+        node = self.node(vid)
+        if vid == self.id_in:
+            self.id_in = None
+        elif vid == self.id_out:
+            self.id_out = None
+        self.remove_vertex(vid)
+        node.close()
+        self.notify_vertex_removal(node)
+        self.notify_listeners(("graph_modified",))
+        self.graph_modified = True
+
+    def remove_edge(self, eid):
+        """ Remove an edge from the graph.
+
+        args:
+            - eid (eid): id of edge to remove.
+        """
+        target = self.target(eid)
+        try:
+            port = self.port(target)
+        except PortError:  # TODO: why??? in which case this happen
+            port = None
+
+        DataFlow.remove_edge(self, eid)
+        if port is not None:
+            self.actor(port._vid).set_input_state(port._local_pid,
+                                                  "disconnected")
+        self.notify_listeners(("edge_removed", ("default", eid)))
+
+    def connect(self, src_id, port_src, dst_id, port_dst):  # TODO: WTF, changed signature compared to dataflow.connect
+        """ Connect 2 elements
+
+        :param src_id: source node id
+        :param port_src: source output port number
+        :param dst_id: destination node id
+        :param port_dst: destination input port number
+        """
+
+        try:
+            source_pid = self.out_port(src_id, port_src)
+            target_pid = self.in_port(dst_id, port_dst)
+            eid = DataFlow.connect(self, source_pid, target_pid)
+        except:
+            logger.error("Enable to create the edge %s %d %d %d %d" % (
+            self.factory.name, src_id, port_src, dst_id, port_dst))
+            return
+
+        self.actor(dst_id).set_input_state(port_dst, "connected")
+        self.notify_listeners(("connection_modified",))
+        self.graph_modified = True
+
+        self.update_eval_listeners(src_id)
+
+        src_port = self.node(src_id).output_desc[port_src]
+        dst_port = self.node(dst_id).input_desc[port_dst]
+        edgedata = "default", eid, src_port, dst_port
+
+        # connected ports cannot be hidden:
+        # nodeSrc.set_port_hidden(port_src, False)
+        self.node(dst_id).set_port_hidden(port_dst, False)
+        self.notify_listeners(("edge_added", edgedata))
+
+    def set_io(self, inputs, outputs):  # TODO: use different mechanism than using physical nodes
+        """ Define inputs and outputs.
 
         Inputs and outputs are list of dict(name='', interface='', value='')
         """
 
         # I/O ports
         # Remove node if nb of input has changed
-        if (self.id_in is not None
-            and len(inputs) != self.node(self.id_in).get_nb_output()):
+        if (self.id_in is not None and
+                    len(inputs) != self.node(self.id_in).get_nb_output()):
             self.remove_node(self.id_in)
             self.id_in = None
 
-        if (self.id_out is not None
-            and len(outputs) != self.node(self.id_out).get_nb_input()):
+        if (self.id_out is not None and
+                    len(outputs) != self.node(self.id_out).get_nb_input()):
             self.remove_node(self.id_out)
             self.id_out = None
 
         # Create new io node if necessary
-        if (self.id_in is None):
+        if self.id_in is None:
             self.id_in = self.add_node(CompositeNodeInput(inputs))
         else:
             self.node(self.id_in).set_io((), inputs)
 
-        if (self.id_out is None):
+        if self.id_out is None:
             self.id_out = self.add_node(CompositeNodeOutput(outputs))
         else:
             self.node(self.id_out).set_io(outputs, ())
 
         Node.set_io(self, inputs, outputs)
 
+
+    ##########################################################################
+    #
+    #   everything below needs to disappear
+    #
+    ##########################################################################
     def set_input(self, index_key, val=None, *args):
         """ Copy val into input node output ports """
         self.node(self.id_in).set_input(index_key, val)
@@ -148,30 +283,6 @@ class CompositeNode(Node, DataFlow):
         """ Set a value to an output """
 
         return self.node(self.id_out).set_output(index_key, val)
-
-    def get_eval_algo(self):
-        """ Return the evaluation algo instance """
-        try:
-            algo_str = self.eval_algo
-            if algo_str == "default":
-                algo_str = "LambdaEvaluation"  # TODO, hack use dataflow_evaluation.default instead
-
-            algo_str = algo_str.strip('"');
-            algo_str = algo_str.strip("'")
-
-
-            # import module
-            baseimp = "algo.dataflow_evaluation"
-            module = __import__(baseimp, globals(), locals(), [algo_str])
-            classobj = module.__dict__[algo_str]
-            return classobj(self)
-
-        except Exception, e:
-            from  openalea.core.algo.dataflow_evaluation import \
-                DefaultEvaluation
-            return DefaultEvaluation(self)
-
-        return self.eval_algo
 
     def eval_as_expression(self, vtx_id=None, step=False):
         """
@@ -256,11 +367,7 @@ class CompositeNode(Node, DataFlow):
         algo = ToScriptEvaluation(self)
         return algo.eval()
 
-    def node(self, vid):
-        """ Convenience function """
-        return self.actor(vid)
-
-    def compute_external_io(self, vertex_selection, new_vid):
+    def compute_external_io(self, vertex_selection, new_vid):  # TODO: too ad hoc, remove
         """
         Return the list of input and output edges to connect the composite
         node.
@@ -280,7 +387,7 @@ class CompositeNode(Node, DataFlow):
 
         return in_edges + out_edges
 
-    def _compute_outside_connection(self, vertex_selection, new_connections,
+    def _compute_outside_connection(self, vertex_selection, new_connections,  # TODO: same as above
                                     new_vid, is_input=True):
         """
         Return external connections of a composite node with input and output
@@ -335,7 +442,7 @@ class CompositeNode(Node, DataFlow):
 
         return connections
 
-    def _compute_inout_connection(self, vertex_selection, is_input=True):
+    def _compute_inout_connection(self, vertex_selection, is_input=True):  # TODO: same as above
         """ Return internal connections of a composite node with input or
         output port.
 
@@ -428,7 +535,7 @@ class CompositeNode(Node, DataFlow):
 
         return (ins, outs, connections)
 
-    def to_factory(self, sgfactory, listid=None, auto_io=False):
+    def to_factory(self, sgfactory, listid=None, auto_io=False):  # TODO: move to factory instead
         """
         Update CompositeNodeFactory to fit with the graph
 
@@ -525,40 +632,7 @@ class CompositeNode(Node, DataFlow):
         if (listid is None):
             self.factory = sgfactory
 
-    def add_node(self, node, vid=None, modify=True):
-        """
-        Add a node in the Graph with a particular id
-        if id is None, autogenrate one
-
-        :param node: the node instance
-        :param vid: element id
-
-        :return: the id
-        """
-        vid = self.add_vertex(vid)
-        # vid = self.add_actor(node, vid)
-
-        # -- NOOOOOO THE UGLY BACK REFERENCE --
-        node.set_compositenode(self)
-
-        node.set_id(vid)
-        for local_pid in xrange(node.get_nb_input()):
-            self.add_in_port(vid, local_pid)
-
-        for local_pid in xrange(node.get_nb_output()):
-            self.add_out_port(vid, local_pid)
-
-        self.set_actor(vid, node)
-        self.notify_vertex_addition(node, vid)
-
-        # self.id_cpt += 1
-        if (modify):
-            self.notify_listeners(("graph_modified",))
-            self.graph_modified = True
-
-        return vid
-
-    def notify_vertex_addition(self, vertex, vid=None):
+    def notify_vertex_addition(self, vertex, vid=None):  # TODO: WTF!! always notify and let listeners choose
         vtype = "vertex"
         doNotify = True
         if (vertex.__class__.__dict__.has_key("__graphitem__")):
@@ -574,7 +648,7 @@ class CompositeNode(Node, DataFlow):
         if doNotify:
             self.notify_listeners(("vertex_added", (vtype, vertex)))
 
-    def notify_vertex_removal(self, vertex):
+    def notify_vertex_removal(self, vertex):  # TODO: WTF!! always notify and let listeners choose
         vtype = "vertex"
         doNotify = True
         if (vertex.__class__.__dict__.has_key("__graphitem__")):
@@ -587,98 +661,38 @@ class CompositeNode(Node, DataFlow):
             pass
         self.notify_listeners(("vertex_removed", (vtype, vertex)))
 
-    def remove_node(self, vtx_id):
-        """
-        remove a node from the graph
-        :param vtx_id: element id
-        """
-        node = self.node(vtx_id)
-        if vtx_id == self.id_in:
-            self.id_in = None
-        elif vtx_id == self.id_out:
-            self.id_out = None
-        self.remove_vertex(vtx_id)
-        node.close()
-        self.notify_vertex_removal(node)
-        self.notify_listeners(("graph_modified",))
-        self.graph_modified = True
-
-    def remove_edge(self, eid):
-        target = self.target(eid)
-        try:
-            port = self.port(target)
-        except PortError:
-            port = None
-        DataFlow.remove_edge(self, eid)
-        if port:
-            self.actor(port._vid).set_input_state(port._local_pid,
-                                                  "disconnected")
-        self.notify_listeners(("edge_removed", ("default", eid)))
-
-    def simulate_destruction_notifications(self):
+    def simulate_destruction_notifications(self):  # TODO: unused, possibly useless and certainly buggy since Node does
+                                                   # not have this method to override
         """emits messages as if we were adding elements to
         the composite node"""
-        Node.simulate_destruction_notifications(self)
+        raise DeprecationWarning()
+        # Node.simulate_destruction_notifications(self)
+        #
+        # ids = self.vertices()
+        # for eltid in ids:
+        #     node = self.node(eltid)
+        #     self.notify_vertex_removal(node)
+        #
+        # for eid in self.edges():
+        #     (src_id, dst_id) = self.source(eid), self.target(eid)
+        #     etype = None
+        #     src_port_id = self.local_id(self.source_port(eid))
+        #     dst_port_id = self.local_id(self.target_port(eid))
+        #
+        #     nodeSrc = self.node(src_id)
+        #     nodeDst = self.node(dst_id)
+        #     src_port = nodeSrc.output_desc[src_port_id]
+        #     dst_port = nodeDst.input_desc[dst_port_id]
+        #
+        #     # don't notify if the edge is connected to the input or
+        #     # output nodes.
+        #     # if(src_id == self.id_in or dst_id == self.id_out):
+        #     # continue
+        #
+        #     edgedata = "default", eid
+        #     self.notify_listeners(("edge_removed", edgedata))
 
-        ids = self.vertices()
-        for eltid in ids:
-            node = self.node(eltid)
-            self.notify_vertex_removal(node)
-
-        for eid in self.edges():
-            (src_id, dst_id) = self.source(eid), self.target(eid)
-            etype = None
-            src_port_id = self.local_id(self.source_port(eid))
-            dst_port_id = self.local_id(self.target_port(eid))
-
-            nodeSrc = self.node(src_id)
-            nodeDst = self.node(dst_id)
-            src_port = nodeSrc.output_desc[src_port_id]
-            dst_port = nodeDst.input_desc[dst_port_id]
-
-            # don't notify if the edge is connected to the input or
-            # output nodes.
-            # if(src_id == self.id_in or dst_id == self.id_out):
-            # continue
-
-            edgedata = "default", eid
-            self.notify_listeners(("edge_removed", edgedata))
-
-    def connect(self, src_id, port_src, dst_id, port_dst):
-        """ Connect 2 elements
-
-        :param src_id: source node id
-        :param port_src: source output port number
-        :param dst_id: destination node id
-        :param port_dst: destination input port number
-        """
-
-        try:
-            source_pid = self.out_port(src_id, port_src)
-            target_pid = self.in_port(dst_id, port_dst)
-            eid = DataFlow.connect(self, source_pid, target_pid)
-        except:
-            logger.error("Enable to create the edge %s %d %d %d %d" % (
-            self.factory.name, src_id, port_src, dst_id, port_dst))
-            return
-
-        self.actor(dst_id).set_input_state(port_dst, "connected")
-        self.notify_listeners(("connection_modified",))
-        self.graph_modified = True
-
-        self.update_eval_listeners(src_id)
-        nodeSrc = self.node(src_id)
-        nodeDst = self.node(dst_id)
-        src_port = nodeSrc.output_desc[port_src]
-        dst_port = nodeDst.input_desc[port_dst]
-
-        edgedata = "default", eid, src_port, dst_port
-        # connected ports cannot be hidden:
-        # nodeSrc.set_port_hidden(port_src, False)
-        nodeDst.set_port_hidden(port_dst, False)
-        self.notify_listeners(("edge_added", edgedata))
-
-    def disconnect(self, src_id, port_src, dst_id, port_dst):
+    def disconnect(self, src_id, port_src, dst_id, port_dst):  # TODO: WTF!! same as remove_edge
         """ Deconnect 2 elements
 
         :param src_id: source node id
@@ -706,7 +720,7 @@ class CompositeNode(Node, DataFlow):
 
     def replace_node(self, vid, newnode):
         """ Replace the node vid by newnode """
-        raise DeprecationWarning("USed???")
+        raise DeprecationWarning("Used???")
         # oldnode = self.actor(vid)
         # caption = newnode.caption
         # newnode.update_internal_data(oldnode.internal_data)
@@ -722,23 +736,27 @@ class CompositeNode(Node, DataFlow):
     # Continuous eval functions
 
     def set_continuous_eval(self, vid, state=True):
-        """ set vid as a continuous evaluated node """
+        """ Set a node for continuous evaluation.
 
+        args:
+            - vid (vid): id of node
+            - state (bool) default True: continuous evaluation
+        """
         node = self.actor(vid)
 
-        if (not node.user_application and not state):
+        if not node.user_application and not state:
             return
 
         # Remove previous listener
-        if (node.user_application and hasattr(node, 'continuous_listener')):
+        if node.user_application and hasattr(node, 'continuous_listener'):
             listener = node.continuous_listener
             node.continuous_listener = None
-            if listener:
+            if listener is not None:
                 del listener
 
         node.user_application = state
 
-        if (state):
+        if state:
             listener = ContinuousEvalListener(self, vid)
             node.continuous_listener = listener
 
@@ -783,7 +801,7 @@ class ContinuousEvalListener(AbstractListener):
         self.dataflow.eval_as_expression(self.vid)
 
 
-class CompositeNodeInput(Node):
+class CompositeNodeInput(Node):  # TODO: to remove
     """Dummy node to represent the composite node inputs"""
 
     def __init__(self, inputs):
