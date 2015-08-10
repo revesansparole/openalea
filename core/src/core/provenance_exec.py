@@ -144,7 +144,10 @@ class ProvenanceExec(object):
         if exec_id not in self._exec_graph:
             raise KeyError("execution id hasn't been recorded")
 
-        dv = dict(state.tasks() )
+        if not state.is_valid_against(self._dataflow):
+            raise UserWarning("Unable to store this state")
+
+        dv = dict(state.tasks())
         dp = {}
         for pid, data in state.items():
             dp[pid] = (state.has_changed(pid), data)
@@ -154,7 +157,7 @@ class ProvenanceExec(object):
     def last_evaluation(self, vid, exec_id=None):
         """ Find last execution id where node has been evaluated.
 
-        Usefull with lazy evaluations.
+        Useful with lazy evaluations.
 
         args:
             - vid (vid): id of node to check
@@ -164,7 +167,7 @@ class ProvenanceExec(object):
 
         return:
             - eid (eid): id of execution where evaluation of node
-                         actually occured for the last time
+                         actually occurred for the last time
         """
         g = self._exec_graph
 
@@ -187,7 +190,7 @@ class ProvenanceExec(object):
 
             p_exec, = tuple(g.in_neighbors(exec_id))
             return self.last_evaluation(vid, p_exec)
-        else :
+        else:
             return exec_id
 
     def last_change(self, pid, exec_id):
@@ -195,7 +198,7 @@ class ProvenanceExec(object):
 
         args:
             - pid (pid): id of output port, or lonely input port, to look at
-            - exec_id (eid): id of execution that modifed this port data
+            - exec_id (eid): id of execution that modified this port data
         """
         df = self._dataflow
         g = self._exec_graph
@@ -223,7 +226,6 @@ class ProvenanceExec(object):
                 p_exec, = parent_ids
                 return self.last_change(pid, p_exec)
 
-
     def provenance(self, pid, exec_id):
         """ Find where does a data come from.
 
@@ -250,9 +252,9 @@ class ProvenanceExec(object):
 
         if df.is_in_port(pid):  # input port
             if df.nb_connections(pid) == 0:  # lonely input port
-                return (None, self.last_change(pid, exec_id))
-            else :
+                return None, self.last_change(pid, exec_id)
+            else:
                 return tuple(df.connected_ports(pid))
         else:  # output port
             vid = df.vertex(pid)
-            return (vid, self.last_evaluation(vid, exec_id))
+            return vid, self.last_evaluation(vid, exec_id)

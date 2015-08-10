@@ -80,11 +80,23 @@ def test_subdataflow_edges():
 
 
 def test_subdataflow_out_edges():
-    assert False
+    df, pids, eids, vids = get_df()
+    pid11, pid21, pid31, pid32, pid33, pid41 = pids
+    eid1, eid2, eid3 = eids
+    vid1, vid2, vid3, vid4 = vids
+
+    sub = SubDataflow2(df, (vid1, vid3))
+    assert set(sub.out_edges(vid1)) == {eid1}
 
 
 def test_subdataflow_in_neighbors():
-    assert False
+    df, pids, eids, vids = get_df()
+    pid11, pid21, pid31, pid32, pid33, pid41 = pids
+    eid1, eid2, eid3 = eids
+    vid1, vid2, vid3, vid4 = vids
+
+    sub = SubDataflow2(df, (vid1, vid3))
+    assert set(sub.in_neighbors(vid3)) == {vid1}
 
 
 def test_subdataflow_port():

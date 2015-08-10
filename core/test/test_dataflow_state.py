@@ -4,6 +4,7 @@ from time import sleep
 from openalea.core.dataflow import DataFlow
 from openalea.core.dataflow_state import DataflowState
 from openalea.core.node import Node
+from openalea.core.subdataflow import SubDataflow2
 
 
 def get_dataflow():
@@ -82,7 +83,53 @@ def test_dataflow_state_reinit_with_changed():
 
 
 def test_dataflow_state_update():
-    assert False
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
+    vid1, vid2, vid3, vid4, vid5 = vids
+
+    dfs1 = DataflowState(df)
+    dfs1.set_data(pid10, 0)
+    dfs1.set_changed(pid10, False)
+
+    for i, pid in enumerate([pid11, pid21, pid33, pid51]):
+        dfs1.set_data(pid, i)
+
+    assert dfs1.is_valid()
+
+    dfs2 = DataflowState(df)
+    dfs2.set_data(pid10, 10)
+    dfs2.set_data(pid11, 10)
+    dfs2.set_changed(pid11, False)
+
+    dfs1.update(dfs2)
+    assert dfs1.get_data(pid10) == 10
+    assert dfs1.has_changed(pid10)
+    assert dfs1.get_data(pid11) == 10
+    assert not dfs1.has_changed(pid11)
+    assert dfs1.get_data(pid21) == 1
+    assert dfs1.get_data(pid33) == 2
+    assert dfs1.get_data(pid51) == 3
+    assert dfs1.has_changed(pid21)
+    assert dfs1.has_changed(pid33)
+    assert dfs1.has_changed(pid51)
+
+    sub = SubDataflow2(df, (vid1, vid3))
+    dfs3 = DataflowState(sub)
+    dfs3.set_data(pid10, 20)
+    dfs3.set_changed(pid10, False)
+    dfs3.set_data(pid11, 20)
+
+    dfs1.update(dfs3)
+    assert dfs1.get_data(pid10) == 20
+    assert not dfs1.has_changed(pid10)
+    assert dfs1.get_data(pid11) == 20
+    assert dfs1.has_changed(pid11)
+    assert dfs1.get_data(pid21) == 1
+    assert dfs1.get_data(pid33) == 2
+    assert dfs1.get_data(pid51) == 3
+    assert dfs1.has_changed(pid21)
+    assert dfs1.has_changed(pid33)
+    assert dfs1.has_changed(pid51)
 
 
 def test_dataflow_state_is_ready_for_evaluation():
@@ -122,6 +169,53 @@ def test_dataflow_state_is_valid():
     assert dfs.is_valid()
 
 
+def test_dataflow_state_is_valid_against():
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
+    vid1, vid2, vid3, vid4, vid5 = vids
+    dfs = DataflowState(df)
+    for i, pid in enumerate([pid11, pid21, pid33, pid51]):
+        dfs.set_data(pid, i)
+        assert not dfs.is_valid()
+
+    dfs.set_data(pid10, 'a')
+    assert dfs.is_valid_against(dfs.dataflow())
+
+    sub = SubDataflow2(df, (vid3,))
+    dfs = DataflowState(sub)
+    dfs.set_data(pid31, None)
+    dfs.set_data(pid32, None)
+    dfs.set_data(pid33, None)
+    assert dfs.is_valid()
+    assert not dfs.is_valid_against(df)
+
+    sub = SubDataflow2(df, (vid1,))
+    dfs = DataflowState(sub)
+    dfs.set_data(pid10, None)
+    dfs.set_data(pid11, None)
+    assert dfs.is_valid()
+    assert dfs.is_valid_against(df)
+
+    sub = SubDataflow2(df, (vid1, vid3))
+    dfs = DataflowState(sub)
+    dfs.set_data(pid10, None)
+    dfs.set_data(pid11, None)
+    dfs.set_data(pid32, None)
+    dfs.set_data(pid33, None)
+    assert dfs.is_valid()
+    assert not dfs.is_valid_against(df)
+
+    sub = SubDataflow2(df, (vid1, vid2, vid3, vid5))
+    dfs = DataflowState(sub)
+    dfs.set_data(pid10, None)
+    dfs.set_data(pid11, None)
+    dfs.set_data(pid21, None)
+    dfs.set_data(pid51, None)
+    dfs.set_data(pid33, None)
+    assert dfs.is_valid()
+    assert dfs.is_valid_against(df)
+
+
 def test_dataflow_state_items():
     df, vids, pids = get_dataflow()
     pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
@@ -140,6 +234,25 @@ def test_dataflow_state_items():
     d = dict((pid, i) for i, pid in enumerate([pid11, pid21, pid33, pid51]))
     d[pid10] = 'a'
     assert dict(dfs.items()) == d
+
+
+def test_dataflow_state_set_data():
+    df, vids, pids = get_dataflow()
+    pid10, pid11, pid21, pid31, pid32, pid33, pid41, pid51 = pids
+    dfs = DataflowState(df)
+
+    # allowed to set data on param in ports
+    dfs.set_data(pid10, None)
+    assert dfs.has_changed(pid10)
+
+    # not allowed to set data on non param in ports
+    for pid in (pid31, pid41):
+        assert_raises(KeyError, lambda: dfs.set_data(pid, None))
+
+    # allowed to set data in out ports
+    for pid in (pid21, pid33, pid51):
+        dfs.set_data(pid, None)
+        assert dfs.has_changed(pid)
 
 
 def test_dataflow_state_get_data():
@@ -251,7 +364,6 @@ def test_dataflow_state_start_task():
     assert dfs.task_end_time(vid2) == 2
 
     dfs.reinit()
-    for vid in vids :
+    for vid in vids:
         assert dfs.task_start_time(vid) is None
         assert dfs.task_end_time(vid) is None
-

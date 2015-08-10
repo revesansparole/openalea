@@ -3,6 +3,7 @@ from nose.tools import assert_raises
 from openalea.core.dataflow import DataFlow
 from openalea.core.dataflow_state import DataflowState
 from openalea.core.provenance_exec import ProvenanceExec
+from openalea.core.subdataflow import SubDataflow2
 
 
 def test_prov_exec_init():
@@ -63,6 +64,25 @@ def test_prov_exec_store():
     prov.store(eid, dfs)
 
     assert_raises(KeyError, lambda: prov.store(eid, dfs))
+
+
+def test_prov_exec_store_subdataflow():
+    df = DataFlow()
+    vid1 = df.add_vertex()
+    pid1 = df.add_out_port(vid1, "out")
+    vid2 = df.add_vertex()
+    pid2 = df.add_in_port(vid2, "in")
+    df.connect(pid1, pid2)
+
+    sub = SubDataflow2(df, (vid2,))
+    state = DataflowState(sub)
+    state.set_data(pid2, None)
+
+    assert state.is_valid()
+
+    prov = ProvenanceExec(df)
+    eid = prov.new_execution()
+    assert_raises(UserWarning, lambda: prov.store(eid, state))
 
 
 def test_prov_exec_get_state():
@@ -318,3 +338,41 @@ def test_prov_exec_provenance_two_nodes():
     assert prov.provenance(pid1, eid) == (vid0, eid)
     assert prov.provenance(pid2, eid) == (pid1,)
     assert prov.provenance(pid3, eid) == (vid1, eid)
+
+
+def test_prov_exec_last_eval_subdataflow():
+    df = DataFlow()
+    vid0 = df.add_vertex()
+    pid0 = df.add_in_port(vid0, 'in')
+    pid1 = df.add_out_port(vid0, 'out')
+    vid1 = df.add_vertex()
+    pid2 = df.add_in_port(vid1, 'in')
+    pid3 = df.add_out_port(vid1, 'out')
+    df.connect(pid1, pid2)
+
+    sub = SubDataflow2(df, (vid0,))
+
+    prov = ProvenanceExec(df)
+
+    dfs1 = DataflowState(df)
+    dfs1.set_data(pid0, 0)
+    dfs1.set_data(pid1, 1)
+    dfs1.set_data(pid3, 3)
+    dfs1.task_started(vid0)
+    dfs1.task_started(vid1)
+
+    eid1 = prov.new_execution()
+    prov.store(eid1, dfs1)
+
+    dfs2 = DataflowState(sub)
+    dfs2.set_data(pid0, 4)
+    dfs2.set_data(pid1, 5)
+    dfs2.task_started(vid0)
+
+    eid2 = prov.new_execution(eid1)
+    prov.store(eid2, dfs2)
+
+    assert prov.last_evaluation(vid0, eid2) == eid2
+    assert prov.last_evaluation(vid1, eid2) == eid1
+    assert prov.last_evaluation(vid0, eid1) == eid1
+    assert prov.last_evaluation(vid1, eid1) == eid1

@@ -60,10 +60,6 @@ def get_dataflow():
     return df, pids, eids, vids
 
 
-def test_subdataflow_state_update():
-    assert False
-
-
 def test_subdataflow_evaluation():
     df, pids, eids, vids = get_dataflow()
     vid1, vid2, vid3, vid4 = vids

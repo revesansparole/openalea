@@ -80,10 +80,12 @@ class DataflowState(object):
         args:
             - other (DataflowState): values to copy
         """
-        raise NotImplementedError()
+        for pid, dat in other.items():
+            self.set_data(pid, dat)
+            self.set_changed(pid, other.has_changed(pid))
 
     def is_ready_for_evaluation(self):
-        """ Test wether the state contains enough information
+        """ Test whether the state contains enough information
         to evaluate the associated dataflow.
 
         Simply check that each lonely input port has
@@ -92,11 +94,11 @@ class DataflowState(object):
         df = self._dataflow
         state = self._state
 
-        return all([pid in state for pid in df.in_ports()
-                    if df.nb_connections(pid) == 0])
+        return all(pid in state for pid in df.in_ports()
+                   if df.nb_connections(pid) == 0)
 
     def is_valid(self):
-        """ Test wether all data have been computed
+        """ Test whether all data have been computed
         """
         df = self._dataflow
         state = self._state
@@ -105,8 +107,26 @@ class DataflowState(object):
             return False
 
         # check that all nodes have been evaluated
-        if not all([pid in state for pid in df.out_ports()]):
+        if any(pid not in state for pid in df.out_ports()):
             return False
+
+        return True
+
+    def is_valid_against(self, dataflow):
+        """ Check the dataflow is valid if considered
+        from the point of view of other.
+
+        args:
+            - dataflow (DataFlow): a dataflow to use as reference
+
+        return:
+            - (bool): True if a dataflow state constructed with the
+                      given dataflow and storing the same data
+                      would be True.
+        """
+        for pid, data in self._state.items():
+            if dataflow.is_in_port(pid) and dataflow.nb_connections(pid) > 0:
+                return False
 
         return True
 
@@ -142,7 +162,7 @@ class DataflowState(object):
         return self._state.items()
 
     def __contains__(self, pid):
-        """ Check wether the port already hold data.
+        """ Check whether the port already hold data.
         """
         return pid in self._state
 
@@ -192,7 +212,7 @@ class DataflowState(object):
         self._changed[pid] = True
 
     def has_changed(self, pid):
-        """ Return wether data has been modified in this state.
+        """ Return whether data has been modified in this state.
 
         Data in a state can either:
          - be set by user, in which case they are tagged as changed
@@ -210,7 +230,7 @@ class DataflowState(object):
         """
         df = self._dataflow
 
-        #check that port is an input port
+        # check that port is an input port
         if df.is_out_port(pid):
             raise KeyError("must be an input port")
 
@@ -238,7 +258,7 @@ class DataflowState(object):
         self._changed[pid] = flag
 
     def task_start_time(self, vid):
-        """ Return time of beginning of task evalution.
+        """ Return time of beginning of task evaluation.
 
         args:
             - vid (vid): id of task to  monitor.
@@ -250,7 +270,7 @@ class DataflowState(object):
         return self._task_start[vid]
 
     def set_task_start_time(self, vid, t):
-        """ Return time of beginning of task evalution.
+        """ Return time of beginning of task evaluation.
 
         args:
             - vid (vid): id of task to  monitor.
@@ -267,7 +287,7 @@ class DataflowState(object):
         self._task_start[vid] = clock()
 
     def task_end_time(self, vid):
-        """ Return time of end of task evalution.
+        """ Return time of end of task evaluation.
 
         args:
             - vid (vid): id of task to  monitor.
@@ -279,7 +299,7 @@ class DataflowState(object):
         return self._task_end[vid]
 
     def set_task_end_time(self, vid, t):
-        """ Return time of end of task evalution.
+        """ Return time of end of task evaluation.
 
         args:
             - vid (vid): id of task to  monitor.
