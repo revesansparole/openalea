@@ -69,6 +69,7 @@ class CompositeNode(Node):
         self.graph_modified = False
         self.evaluating = False
         self.eval_algo = "default"
+        self._state = DataflowState(self._dataflow)
 
     def node(self, vid):
         """ Convenience function """
@@ -121,6 +122,9 @@ class CompositeNode(Node):
             node = self._dataflow.actor(vid)
             node.reset()
 
+        # TODO: hack with state
+            self._state.clear()
+
     def invalidate(self):
         """ Invalidate all nodes.
         """
@@ -129,6 +133,9 @@ class CompositeNode(Node):
         for vid in set(self._dataflow.vertices()):
             node = self._dataflow.actor(vid)
             node.invalidate()
+
+        # TODO: hack with state
+            self._state.clear()
 
     def get_eval_algo(self):
         """ Return an instance of the evaluation algorithm
@@ -330,15 +337,18 @@ class CompositeNode(Node):
             if isinstance(algo, (BruteEvaluation, LazyEvaluation)):
                 print "hack EVAL"
                 # create new state
-                state = DataflowState(self._dataflow)
+                # state = DataflowState(self._dataflow)
+                state = self._state
 
-                # fill lonely input ports
+                # fill lonely input ports if needed
+                # assume no change in dataflow at this point # TODO
                 for pid in self._dataflow.in_ports():
                     if self._dataflow.nb_connections(pid) == 0:
-                        node = self.node(self._dataflow.vertex(pid))
-                        lpid = self._dataflow.local_id(pid)
-                        val = node.inputs[lpid]
-                        state.set_data(pid, val)
+                        if pid not in state._state: # TODO: hack access internal
+                            node = self.node(self._dataflow.vertex(pid))
+                            lpid = self._dataflow.local_id(pid)
+                            val = node.inputs[lpid]
+                            state.set_data(pid, val)
 
                 # perform evaluation
                 env = EvaluationEnvironment()
