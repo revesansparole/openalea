@@ -123,11 +123,13 @@ class ProvenanceExec(object):
             state.set_data(pid, data)
             state.set_changed(pid, changed)
 
-        for vid, (tinit, tend) in dv.items():
+        for vid, (tinit, tend, already) in dv.items():
             if tinit is not None:
                 state.set_task_start_time(vid, tinit)
             if tend is not None:
                 state.set_task_end_time(vid, tend)
+            if already:
+                state.set_task_already_evaluated(vid)
 
         return state
 
@@ -183,7 +185,7 @@ class ProvenanceExec(object):
             else:
                 exec_id, = leaves
 
-        state = self.get_state(exec_id)
+        state = self.get_state(exec_id)  # TODO: optimize
         if state.task_start_time(vid) is None:
             if g.nb_in_neighbors(exec_id) == 0:
                 raise UserWarning("no valid evaluation found")
@@ -203,7 +205,7 @@ class ProvenanceExec(object):
         df = self._dataflow
         g = self._exec_graph
 
-        state = self.get_state(exec_id)
+        state = self.get_state(exec_id)  # TODO: optimize
 
         if df.is_in_port(pid):
             if df.nb_connections(pid) == 0:  # lonely input port

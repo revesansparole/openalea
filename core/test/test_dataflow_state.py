@@ -94,8 +94,12 @@ def test_dataflow_state_update():
     for i, pid in enumerate([pid11, pid21, pid33, pid51]):
         dfs1.set_data(pid, i)
 
+    dfs1.set_task_start_time(vid1, 1)
+    dfs1.set_task_already_evaluated(vid2)
+
     assert dfs1.is_valid()
 
+    # update dataflow state with another dataflow state
     dfs2 = DataflowState(df)
     dfs2.set_data(pid10, 10)
     dfs2.set_data(pid11, 10)
@@ -112,12 +116,17 @@ def test_dataflow_state_update():
     assert dfs1.has_changed(pid21)
     assert dfs1.has_changed(pid33)
     assert dfs1.has_changed(pid51)
+    assert dfs1.task_start_time(vid1) == 1
+    assert not dfs1.task_already_evaluated(vid1)
+    assert dfs1.task_already_evaluated(vid2)
 
+    # update dataflow state with a subdataflow state
     sub = SubDataflow2(df, (vid1, vid3))
     dfs3 = DataflowState(sub)
     dfs3.set_data(pid10, 20)
     dfs3.set_changed(pid10, False)
     dfs3.set_data(pid11, 20)
+    dfs3.set_task_already_evaluated(vid3)
 
     dfs1.update(dfs3)
     assert dfs1.get_data(pid10) == 20
@@ -130,6 +139,22 @@ def test_dataflow_state_update():
     assert dfs1.has_changed(pid21)
     assert dfs1.has_changed(pid33)
     assert dfs1.has_changed(pid51)
+    assert dfs1.task_start_time(vid1) == 1
+    assert not dfs1.task_already_evaluated(vid1)
+    assert dfs1.task_already_evaluated(vid2)
+    assert dfs1.task_already_evaluated(vid3)
+
+    # update subdataflow state with dataflow state
+    dfs4 = DataflowState(sub)
+
+    dfs4.update(dfs1)
+    assert dfs4.get_data(pid10) == 20
+    assert not dfs4.has_changed(pid10)
+    assert dfs4.get_data(pid11) == 20
+    assert dfs4.has_changed(pid11)
+    assert dfs4.task_start_time(vid1) == 1
+    assert not dfs4.task_already_evaluated(vid1)
+    assert dfs4.task_already_evaluated(vid3)
 
 
 def test_dataflow_state_is_ready_for_evaluation():

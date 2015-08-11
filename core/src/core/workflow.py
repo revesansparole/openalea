@@ -37,6 +37,8 @@ class WorkFlow(object):
         args:
             - with_provenance (bool): flag to record provenance.
         """
+        raise DeprecationWarning()
+
         df = DataFlow()
         self._dataflow = df
         self._state = DataflowState(df)

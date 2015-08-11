@@ -207,10 +207,10 @@ class LazyEvaluation(BruteEvaluation):
         node = df.actor(vid)
 
         if node.is_lazy():
-            # case node has no inputs
-            if len(tuple(df.in_ports(vid))) == 0:
-                # check wether result has already been computed
-                if all(pid in state for pid in df.out_ports(vid)):
+            if state.task_already_evaluated(vid):
+                if any(state.input_has_changed(pid) for pid in df.in_ports(vid)):
+                    return BruteEvaluation.eval_node(self, env, state, vid)
+                else:  # node will not be evaluated, mark outputs as unchanged
                     # set task execution time to None
                     state.set_task_start_time(vid, None)
                     state.set_task_end_time(vid, None)
@@ -220,20 +220,39 @@ class LazyEvaluation(BruteEvaluation):
                         state.set_changed(pid, False)
 
                     return False
-                else:
-                    return BruteEvaluation.eval_node(self, env, state, vid)
-            # check if inputs have changed
-            elif any([state.input_has_changed(pid) for pid in df.in_ports(vid)]):
-                return BruteEvaluation.eval_node(self, env, state, vid)
-            else:
-                # set task execution time to None
-                state.set_task_start_time(vid, None)
-                state.set_task_end_time(vid, None)
-
-                # mark all outputs as unchanged
-                for pid in df.out_ports(vid):
-                    state.set_changed(pid, False)
-
-                return False
+            else:  # Node needs a first evaluation anyway
+                ret = BruteEvaluation.eval_node(self, env, state, vid)
+                state.set_task_already_evaluated(vid)
+                return ret
+            # # case node has no inputs
+            # if len(tuple(df.in_ports(vid))) == 0:
+            #     # check whether result has already been computed
+            #     if all(pid in state for pid in df.out_ports(vid)):
+            #         # set task execution time to None
+            #         state.set_task_start_time(vid, None)
+            #         state.set_task_end_time(vid, None)
+            #
+            #         # mark all outputs as unchanged
+            #         for pid in df.out_ports(vid):
+            #             print "ch", pid
+            #             state.set_changed(pid, False)
+            #
+            #         return False
+            #     else:
+            #         return BruteEvaluation.eval_node(self, env, state, vid)
+            # # check if inputs have changed
+            # elif any([state.input_has_changed(pid) for pid in df.in_ports(vid)]):
+            #     print "pass"
+            #     return BruteEvaluation.eval_node(self, env, state, vid)
+            # else:
+            #     # set task execution time to None
+            #     state.set_task_start_time(vid, None)
+            #     state.set_task_end_time(vid, None)
+            #
+            #     # mark all outputs as unchanged
+            #     for pid in df.out_ports(vid):
+            #         state.set_changed(pid, False)
+            #
+            #     return False
         else:
             return BruteEvaluation.eval_node(self, env, state, vid)

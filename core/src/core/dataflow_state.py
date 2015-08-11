@@ -35,6 +35,7 @@ class DataflowState(object):
         self._dataflow = dataflow
         self._state = {}
         self._changed = {}
+        self._already_evaluated = {}
         self._task_start = {}
         self._task_end = {}
         self.clear()
@@ -47,9 +48,11 @@ class DataflowState(object):
         """
         self._state.clear()
         self._changed.clear()
+        self._already_evaluated.clear()
         self._task_start.clear()
         self._task_end.clear()
         for vid in self._dataflow.vertices():
+            self._already_evaluated[vid] = False
             self._task_start[vid] = None
             self._task_end[vid] = None
 
@@ -80,9 +83,19 @@ class DataflowState(object):
         args:
             - other (DataflowState): values to copy
         """
+        # update data on ports
         for pid, dat in other.items():
             self.set_data(pid, dat)
             self.set_changed(pid, other.has_changed(pid))
+
+        # update info associated to node evaluation
+        for vid, (t0, t1, already) in other.tasks():
+            if t0 is not None:
+                self.set_task_start_time(vid, t0)
+            if t1 is not None:
+                self.set_task_end_time(vid, t1)
+            if already:
+                self.set_task_already_evaluated(vid)
 
     def is_ready_for_evaluation(self):
         """ Test whether the state contains enough information
@@ -241,6 +254,7 @@ class DataflowState(object):
         # case of a node connected to other nodes upstream
         for npid in df.connected_ports(pid):
             if self._changed.get(npid, True):
+                print "npid", npid
                 return True
 
         return False
@@ -256,6 +270,28 @@ class DataflowState(object):
             raise KeyError("no data on given port")
 
         self._changed[pid] = flag
+
+    def task_already_evaluated(self, vid):
+        """ Check whether a given task has already been
+        evaluated at some point.
+
+        args:
+            - vid (vid): id of actor/task
+
+        return:
+            - (bool)
+        """
+        return self._already_evaluated[vid]
+
+    def set_task_already_evaluated(self, vid, flag=True):
+        """ Set the flag to tell a task has already
+        been evaluated.
+
+        args:
+            - vid (vid): id of actor/task
+            - flag (bool) default True
+        """
+        self._already_evaluated[vid] = flag
 
     def task_start_time(self, vid):
         """ Return time of beginning of task evaluation.
@@ -322,4 +358,6 @@ class DataflowState(object):
             - iter of (vid,(float|float)): tuple of task id, (tinit, tend)
         """
         for vid in self._dataflow.vertices():
-            yield vid, (self._task_start[vid], self._task_end[vid])
+            yield vid, (self._task_start[vid],
+                        self._task_end[vid],
+                        self._already_evaluated[vid])
