@@ -20,6 +20,9 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 
+from node_control_flow import ControlFlowNode
+
+
 class EvaluationError(Exception):
     pass
 
@@ -72,6 +75,18 @@ class AbstractEvaluation(object):
         """ Clear algorithm, ready to reevaluate.
         """
         pass
+
+    def clone(self, dataflow):  # TODO: reimplement in subclasses
+        """ Create a new evaluation algorithm
+        around the given dataflow.
+
+        args:
+            - dataflow (DataFlow)
+
+        return:
+            - (EvaluationAlgorithm)
+        """
+        return type(self)(dataflow)
 
 
 class BruteEvaluation(AbstractEvaluation):
@@ -129,6 +144,9 @@ class BruteEvaluation(AbstractEvaluation):
         self._evaluated.add(vid)
 
         actor = self._dataflow.actor(vid)
+        if isinstance(actor, ControlFlowNode):
+            return actor.perform_evaluation(self, env, state, vid)
+
         if actor.get_caption() == "extra":
             return env.handle_extra(self._dataflow, env, state, vid)
 

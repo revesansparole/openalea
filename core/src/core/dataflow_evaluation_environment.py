@@ -38,6 +38,11 @@ class EvaluationEnvironment(object):
         """
         return self._exec_id
 
+    def set_current_execution(self, exec_id):  # TODO: test and handling exceptions
+        """ TEST
+        """
+        self._exec_id = exec_id
+
     def new_execution(self, exec_id=None):
         """ Change execution id to a new unused id.
 

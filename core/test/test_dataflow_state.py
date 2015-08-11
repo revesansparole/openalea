@@ -151,6 +151,10 @@ def test_dataflow_state_update():
     assert dfs4.last_evaluation(2) == 1
 
 
+def test_dataflow_state_clone():
+    raise NotImplementedError()
+
+
 def test_dataflow_state_is_ready_for_evaluation():
     df = get_dataflow()
     dfs = DataflowState(df)

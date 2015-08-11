@@ -97,6 +97,21 @@ class DataflowState(object):
             if exec_id is not None:
                 self.set_last_evaluation(vid, exec_id)
 
+    def clone(self, dataflow):
+        """ Clone content of this state into
+        a new DataflowState constructed around
+        the given dataflow.
+
+        args:
+            - dataflow (DataFlow): another dataflow
+
+        return:
+            - (DataflowState)
+        """
+        state = type(self)(dataflow)
+        state.update(self)
+        return state
+
     def is_ready_for_evaluation(self):
         """ Test whether the state contains enough information
         to evaluate the associated dataflow.

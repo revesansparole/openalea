@@ -69,6 +69,10 @@ def test_dataflow_evaluation_init():
     assert algo.require_evaluation()
 
 
+def test_dataflow_evaluation_clone():
+    raise NotImplementedError()
+
+
 def test_dataflow_evaluation_eval_init():
     df = get_dataflow()[0]
     algo = BruteEvaluation(df)
