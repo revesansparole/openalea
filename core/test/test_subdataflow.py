@@ -10,7 +10,8 @@ from openalea.core.dataflow import (DataFlow,
                                     InvalidEdge,
                                     InvalidVertex,
                                     PortError)
-from openalea.core.subdataflow import SubDataflow2
+from openalea.core.subdataflow import SubDataflow2, get_upstream_subdataflow
+
 
 class DummyActor(IActor):
     def set_id(self, vid):
@@ -29,27 +30,28 @@ class DummyActor(IActor):
 
 def get_df():
     df = DataFlow()
-    vid1 = df.add_vertex()
-    pid11 = df.add_out_port(vid1, "out")
-    vid2 = df.add_vertex()
-    pid21 = df.add_out_port(vid2, "out")
+    df.add_vertex(0)
+    df.add_out_port(0, "out", 0)
+    df.add_vertex(1)
+    df.add_out_port(1, "out", 1)
 
-    vid3 = df.add_vertex()
-    pid31 = df.add_in_port(vid3, "in1")
-    pid32 = df.add_in_port(vid3, "in2")
-    pid33 = df.add_out_port(vid3, "res")
+    df.add_vertex(2)
+    df.add_in_port(2, "in1", 2)
+    df.add_in_port(2, "in2", 3)
+    df.add_out_port(2, "res", 4)
 
-    vid4 = df.add_vertex()
-    pid41 = df.add_in_port(vid4, "in")
+    df.add_vertex(3)
+    df.add_in_port(3, "in", 5)
 
-    eid1 = df.connect(pid11, pid31)
-    eid2 = df.connect(pid21, pid32)
-    eid3 = df.connect(pid33, pid41)
+    df.add_vertex(4)
+    df.add_out_port(4, "out", 6)
 
-    pids = (pid11, pid21, pid31, pid32, pid33, pid41)
-    eids = (eid1, eid2, eid3)
-    vids = (vid1, vid2, vid3, vid4)
-    return df, pids, eids, vids
+    df.connect(0, 2, 0)
+    df.connect(1, 3, 1)
+    df.connect(4, 5, 2)
+    df.connect(6, 3, 3)
+
+    return df
 
 
 def test_subdataflow_init():
@@ -60,166 +62,144 @@ def test_subdataflow_init():
 
 
 def test_subdataflow_vertices():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
-    assert set(sub.vertices()) == {vid1, vid3}
+    sub = SubDataflow2(df, (0, 2))
+    assert set(sub.vertices()) == {0, 2}
 
 
 def test_subdataflow_edges():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
-    assert set(sub.edges()) == {eid1}
+    sub = SubDataflow2(df, (0, 2))
+    assert set(sub.edges()) == {0}
 
 
 def test_subdataflow_out_edges():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
-    assert set(sub.out_edges(vid1)) == {eid1}
+    sub = SubDataflow2(df, (0, 2))
+    assert set(sub.out_edges(0)) == {0}
 
 
 def test_subdataflow_in_neighbors():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
-    assert set(sub.in_neighbors(vid3)) == {vid1}
+    sub = SubDataflow2(df, (0, 2))
+    assert set(sub.in_neighbors(2)) == {0}
 
 
 def test_subdataflow_port():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
+    sub = SubDataflow2(df, (0, 2))
 
-    assert sub.source_port(eid1) == df.source_port(eid1)
-    assert_raises(InvalidEdge, lambda: sub.source_port(eid2))
-    assert_raises(InvalidEdge, lambda: sub.source_port(eid3))
+    assert sub.source_port(0) == df.source_port(0)
+    assert_raises(InvalidEdge, lambda: sub.source_port(1))
+    assert_raises(InvalidEdge, lambda: sub.source_port(2))
 
-    assert sub.target_port(eid1) == df.target_port(eid1)
-    assert_raises(InvalidEdge, lambda: sub.target_port(eid2))
-    assert_raises(InvalidEdge, lambda: sub.target_port(eid3))
+    assert sub.target_port(0) == df.target_port(0)
+    assert_raises(InvalidEdge, lambda: sub.target_port(1))
+    assert_raises(InvalidEdge, lambda: sub.target_port(2))
 
 
 def test_subdataflow_ports():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
+    sub = SubDataflow2(df, (0, 2))
 
-    assert set(sub.ports()) == {pid11, pid31, pid32, pid33}
-    assert set(sub.ports(vid1)) == {pid11}
-    assert_raises(InvalidVertex, lambda: sub.ports(vid2).next())
-    assert set(sub.ports(vid3)) == {pid31, pid32, pid33}
-    assert_raises(InvalidVertex, lambda: sub.ports(vid4).next())
+    assert set(sub.ports()) == {0, 2, 3, 4}
+    assert set(sub.ports(0)) == {0}
+    assert_raises(InvalidVertex, lambda: sub.ports(1).next())
+    assert set(sub.ports(2)) == {2, 3, 4}
+    assert_raises(InvalidVertex, lambda: sub.ports(3).next())
 
 
 def test_subdataflow_in_ports():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
+    sub = SubDataflow2(df, (0, 2))
 
-    assert set(sub.in_ports()) == {pid31, pid32}
-    assert len(set(sub.in_ports(vid1))) == 0
-    assert_raises(InvalidVertex, lambda: sub.in_ports(vid2).next())
-    assert set(sub.in_ports(vid3)) == {pid31, pid32}
-    assert_raises(InvalidVertex, lambda: sub.in_ports(vid4).next())
+    assert set(sub.in_ports()) == {2, 3}
+    assert len(set(sub.in_ports(0))) == 0
+    assert_raises(InvalidVertex, lambda: sub.in_ports(1).next())
+    assert set(sub.in_ports(2)) == {2, 3}
+    assert_raises(InvalidVertex, lambda: sub.in_ports(3).next())
 
 
 def test_subdataflow_out_ports():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
+    sub = SubDataflow2(df, (0, 2))
 
-    assert set(sub.out_ports()) == {pid11, pid33}
-    assert set(sub.out_ports(vid1)) == {pid11}
-    assert_raises(InvalidVertex, lambda: sub.out_ports(vid2).next())
-    assert set(sub.out_ports(vid3)) == {pid33}
-    assert_raises(InvalidVertex, lambda: sub.out_ports(vid4).next())
+    assert set(sub.out_ports()) == {0, 4}
+    assert set(sub.out_ports(0)) == {0}
+    assert_raises(InvalidVertex, lambda: sub.out_ports(1).next())
+    assert set(sub.out_ports(2)) == {4}
+    assert_raises(InvalidVertex, lambda: sub.out_ports(3).next())
 
 
 def test_subdataflow_connected_edges():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
+    sub = SubDataflow2(df, (0, 2))
 
-    assert set(sub.connected_edges(pid11)) == {eid1}
-    assert set(sub.connected_edges(pid31)) == {eid1}
-    assert len(set(sub.connected_edges(pid32))) == 0
-    assert len(set(sub.connected_edges(pid33))) == 0
-    assert_raises(PortError, lambda: sub.connected_edges(pid21).next())
-    assert_raises(PortError, lambda: sub.connected_edges(pid41).next())
+    assert set(sub.connected_edges(0)) == {0}
+    assert set(sub.connected_edges(2)) == {0}
+    assert len(set(sub.connected_edges(3))) == 0
+    assert len(set(sub.connected_edges(4))) == 0
+    assert_raises(PortError, lambda: sub.connected_edges(1).next())
+    assert_raises(PortError, lambda: sub.connected_edges(5).next())
 
 
 def test_subdataflow_connected_ports():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
+    sub = SubDataflow2(df, (0, 2))
 
-    assert set(sub.connected_ports(pid11)) == {pid31}
-    assert set(sub.connected_ports(pid31)) == {pid11}
-    assert len(set(sub.connected_ports(pid32))) == 0
-    assert len(set(sub.connected_ports(pid33))) == 0
-    assert_raises(PortError, lambda: sub.connected_ports(pid21).next())
-    assert_raises(PortError, lambda: sub.connected_ports(pid41).next())
+    assert set(sub.connected_ports(0)) == {2}
+    assert set(sub.connected_ports(2)) == {0}
+    assert len(set(sub.connected_ports(3))) == 0
+    assert len(set(sub.connected_ports(4))) == 0
+    assert_raises(PortError, lambda: sub.connected_ports(1).next())
+    assert_raises(PortError, lambda: sub.connected_ports(5).next())
 
 
 def test_subdataflow_nb_connections():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
-    assert sub.nb_connections(pid11) == 1
-    assert sub.nb_connections(pid31) == 1
-    assert sub.nb_connections(pid32) == 0
-    assert sub.nb_connections(pid33) == 0
-    for pid in (pid21, pid41):
+    sub = SubDataflow2(df, (0, 2))
+    assert sub.nb_connections(0) == 1
+    assert sub.nb_connections(2) == 1
+    assert sub.nb_connections(3) == 0
+    assert sub.nb_connections(4) == 0
+    for pid in (1, 5):
         assert_raises(PortError, lambda: sub.nb_connections(pid))
 
 
 def test_subdataflow_mirror_functions():
-    df, pids, eids, vids = get_df()
-    pid11, pid21, pid31, pid32, pid33, pid41 = pids
-    eid1, eid2, eid3 = eids
-    vid1, vid2, vid3, vid4 = vids
+    df = get_df()
 
-    sub = SubDataflow2(df, (vid1, vid3))
-    assert sub.is_in_port(pid31)
-    assert sub.is_out_port(pid11)
-    assert sub.vertex(pid11) == vid1
-    assert sub.port(pid11) == df.port(pid11)
-    assert sub.local_id(pid11) == df.local_id(pid11)
-    assert sub.in_port(vid3, "in1") == df.in_port(vid3, "in1")
-    assert sub.out_port(vid1, "out") == df.out_port(vid1, "out")
-    assert sub.actor(vid1) == df.actor(vid1)
+    sub = SubDataflow2(df, (0, 2))
+    assert sub.is_in_port(2)
+    assert sub.is_out_port(0)
+    assert sub.vertex(0) == 0
+    assert sub.port(0) == df.port(0)
+    assert sub.local_id(0) == df.local_id(0)
+    assert sub.in_port(2, "in1") == df.in_port(2, "in1")
+    assert sub.out_port(0, "out") == df.out_port(0, "out")
+    assert sub.actor(0) == df.actor(0)
+
+
+def test_subdataflow_get_upstream_subdataflow():
+    df = get_df()
+    assert_raises(PortError, lambda: get_upstream_subdataflow(df, 0))
+
+    sub = get_upstream_subdataflow(df, 2)
+    assert set(sub.vertices()) == {0}
+
+    sub = get_upstream_subdataflow(df, 3)
+    assert set(sub.vertices()) == {1, 4}
+
+    sub = get_upstream_subdataflow(df, 5)
+    assert set(sub.vertices()) == {0, 1, 2, 4}

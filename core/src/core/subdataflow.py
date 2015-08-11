@@ -160,3 +160,29 @@ class SubDataflow2(object):
 
     def actor(self, vid):
         return self._dataflow.actor(vid)
+
+
+def get_upstream_subdataflow(dataflow, root_pid):
+    """ Construct a subdataflow including all the nodes
+    upstream a given port.
+
+    args:
+        - dataflow (DataFlow): master dataflow to consider
+        - root_pid (pid): if of the port to consider
+
+    return:
+        - (SubDataflow2)
+    """
+    if not dataflow.is_in_port(root_pid):
+        raise PortError("Port needs to be an input port")
+
+    vids = set()
+    front = {dataflow.vertex(pid) for pid in dataflow.connected_ports(root_pid)}
+    while len(front) > 0:
+        vid = front.pop()
+        vids.add(vid)
+        for nid in dataflow.in_neighbors(vid):
+            if nid not in vids :
+                front.add(nid)
+
+    return SubDataflow2(dataflow, vids)
