@@ -254,7 +254,6 @@ class DataflowState(object):
         # case of a node connected to other nodes upstream
         for npid in df.connected_ports(pid):
             if self._changed.get(npid, True):
-                print "npid", npid
                 return True
 
         return False

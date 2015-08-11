@@ -138,13 +138,13 @@ class BruteEvaluation(AbstractEvaluation):
 
         Store result in state.
         Doesn't test if state is valid or if the node
-        actually need to be evaluated
+        actually needs to be evaluated
         """
         df = self._dataflow
 
         # find input values
         inputs = [state.get_data(pid) for pid in df.in_ports(vid)]
-        #tag input values as unchanged if necessary
+        # tag input values as unchanged if necessary
         for pid in df.in_ports(vid):
             if df.nb_connections(pid) == 0:
                 state.set_changed(pid, False)
@@ -156,6 +156,7 @@ class BruteEvaluation(AbstractEvaluation):
 
         # affect return values to output ports
         pids = tuple(df.out_ports(vid))
+
         # TODO: hack to insert this in visualea, to remove
         from openalea.core.node import FuncNodeRaw, FuncNodeSingle
         node = df.actor(vid)
@@ -169,7 +170,7 @@ class BruteEvaluation(AbstractEvaluation):
                         pass
                 except TypeError:
                     vals = [vals]
-
+        # TODO: end of hack
 
         if len(pids) == 0:
             if vals is not None:
