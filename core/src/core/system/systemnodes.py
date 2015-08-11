@@ -21,7 +21,7 @@ __revision__ = " $Id$ "
 
 from openalea.core.node import AbstractNode, Node
 from openalea.core.node_annotation import Annotation
-from openalea.core.dataflow_old import SubDataflow
+from openalea.core.subdataflow_old import SubDataflow
 
 DEBUG = False
 

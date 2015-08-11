@@ -173,7 +173,7 @@ class BruteEvaluation(AbstractEvaluation):
 
         if len(pids) == 0:
             if vals is not None:
-                msg = "function return value but node has no outport"
+                msg = "function return value but node has no out port"
                 raise EvaluationError(msg)
         else:
             try:
