@@ -35,7 +35,7 @@ class DataflowState(object):
         self._dataflow = dataflow
         self._state = {}
         self._changed = {}
-        self._already_evaluated = {}
+        self._last_evaluation = {}
         self._task_start = {}
         self._task_end = {}
         self.clear()
@@ -48,11 +48,11 @@ class DataflowState(object):
         """
         self._state.clear()
         self._changed.clear()
-        self._already_evaluated.clear()
+        self._last_evaluation.clear()
         self._task_start.clear()
         self._task_end.clear()
         for vid in self._dataflow.vertices():
-            self._already_evaluated[vid] = False
+            self._last_evaluation[vid] = None
             self._task_start[vid] = None
             self._task_end[vid] = None
 
@@ -89,13 +89,13 @@ class DataflowState(object):
             self.set_changed(pid, other.has_changed(pid))
 
         # update info associated to node evaluation
-        for vid, (t0, t1, already) in other.tasks():
+        for vid, (t0, t1, exec_id) in other.tasks():
             if t0 is not None:
                 self.set_task_start_time(vid, t0)
             if t1 is not None:
                 self.set_task_end_time(vid, t1)
-            if already:
-                self.set_task_already_evaluated(vid)
+            if exec_id is not None:
+                self.set_last_evaluation(vid, exec_id)
 
     def is_ready_for_evaluation(self):
         """ Test whether the state contains enough information
@@ -270,27 +270,27 @@ class DataflowState(object):
 
         self._changed[pid] = flag
 
-    def task_already_evaluated(self, vid):
-        """ Check whether a given task has already been
-        evaluated at some point.
+    def last_evaluation(self, vid):
+        """ Retrieve execution id of last evaluation of this node.
 
         args:
             - vid (vid): id of actor/task
 
         return:
-            - (bool)
+            - (eid): execution id of last evaluation or None if
+                     the node has not been evaluated yet.
         """
-        return self._already_evaluated[vid]
+        return self._last_evaluation[vid]
 
-    def set_task_already_evaluated(self, vid, flag=True):
-        """ Set the flag to tell a task has already
-        been evaluated.
+    def set_last_evaluation(self, vid, exec_id):
+        """ Store execution id of last evaluation of the node
 
         args:
-            - vid (vid): id of actor/task
-            - flag (bool) default True
+            - vid (vid): id of actor/task.
+            - exec_id (id): id of last execution that evaluated
+                            this node.
         """
-        self._already_evaluated[vid] = flag
+        self._last_evaluation[vid] = exec_id
 
     def task_start_time(self, vid):
         """ Return time of beginning of task evaluation.
@@ -354,9 +354,10 @@ class DataflowState(object):
         """ Iterate on all tasks and evaluation times.
 
         return:
-            - iter of (vid,(float|float)): tuple of task id, (tinit, tend)
+            - iter of (vid, (float, float, eid)):
+                    tuple of task id, (tinit, tend, last_execution_id)
         """
         for vid in self._dataflow.vertices():
             yield vid, (self._task_start[vid],
                         self._task_end[vid],
-                        self._already_evaluated[vid])
+                        self._last_evaluation[vid])
