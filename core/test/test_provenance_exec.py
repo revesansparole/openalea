@@ -161,14 +161,14 @@ def test_prov_exec_get_state_with_task():
     state = prov.get_state(eid)
     assert state.task_start_time(vid) == dfs.task_start_time(vid)
     assert state.task_end_time(vid) is None
-    assert not state.task_already_evaluated(vid)
+    assert state.last_evaluation(vid) is None
 
-    state.set_task_already_evaluated(vid)
     eid = prov.new_execution()
+    state.set_last_evaluation(vid, eid)
     prov.store(eid, state)
 
     state2 = prov.get_state(eid)
-    assert state2.task_already_evaluated(vid)
+    assert state2.last_evaluation(vid) == eid
 
 
 def test_prov_exec_last_evaluation():

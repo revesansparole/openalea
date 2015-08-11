@@ -354,7 +354,7 @@ class DataFlow(PropertyGraph):
 
         if actor is not None:
             if not isinstance(actor, Node):  # TODO: hack
-                # test actor inputs vs vertex in ports
+                # test actor inputs vs vertex in ports  # TODO: reciprocate test
                 for key, interface in actor.input_descriptions():
                     pid = self.in_port(vid, key)
 

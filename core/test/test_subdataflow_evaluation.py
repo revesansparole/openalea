@@ -7,6 +7,7 @@ from openalea.core.dataflow_evaluation import (EvaluationError,
                                                AbstractEvaluation,
                                                BruteEvaluation,
                                                LazyEvaluation)
+from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
 from openalea.core.node import Node, FuncNodeRaw, FuncNodeSingle
 from openalea.core.subdataflow import SubDataflow2
 
@@ -67,7 +68,7 @@ def test_subdataflow_evaluation():
     sub = SubDataflow2(df, (vid1, vid3))
     algo = BruteEvaluation(sub)
 
-    env = None
+    env = EvaluationEnvironment(0)
     dfs = DataflowState(sub)
     dfs.set_data(pid10, 1)
     dfs.set_data(pid32, 5)

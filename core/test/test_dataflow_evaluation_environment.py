@@ -11,6 +11,11 @@ def test_evaluation_environment_init():
     assert not env.record_provenance()
     assert env.provenance() is None
 
+    env = EvaluationEnvironment(0)
+    assert env.current_execution() == 0
+    assert not env.record_provenance()
+    assert env.provenance() is None
+
 
 def test_evaluation_environment_set_provenance():
     df = DataFlow()
@@ -21,6 +26,14 @@ def test_evaluation_environment_set_provenance():
     prov = env.provenance()
     assert prov is not None
     assert env.current_execution() is None
+
+    env = EvaluationEnvironment(0)
+    env.set_provenance(df)
+    assert env.record_provenance()
+    prov = env.provenance()
+    assert prov is not None
+    assert env.current_execution() in prov.execution_graph()
+
 
 def test_evaluation_environment_new_execution():
     df = DataFlow()

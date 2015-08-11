@@ -7,6 +7,7 @@ from openalea.core.dataflow_evaluation import (EvaluationError,
                                                AbstractEvaluation,
                                                BruteEvaluation,
                                                LazyEvaluation)
+from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
 from openalea.core.node import Node, FuncNodeRaw, FuncNodeSingle
 
 
@@ -76,12 +77,15 @@ def test_dataflow_evaluation_eval_init():
     dfs = DataflowState(df)
     assert_raises(EvaluationError, lambda: algo.eval(env, dfs))
 
+    env = EvaluationEnvironment()
+    assert_raises(EvaluationError, lambda: algo.eval(env, dfs))
+
 
 def test_dataflow_evaluation_eval():
     df, (pid_in, pid_out) = get_dataflow()
     algo = BruteEvaluation(df)
 
-    env = None
+    env = EvaluationEnvironment(0)
     dfs = DataflowState(df)
     dfs.set_data(pid_in, 1)
 
@@ -95,7 +99,7 @@ def test_dataflow_evaluation_eval_no_vid():
     df, (pid_in, pid_out) = get_dataflow()
     algo = BruteEvaluation(df)
 
-    env = None
+    env = EvaluationEnvironment(0)
     dfs = DataflowState(df)
     dfs.set_data(pid_in, 1)
 
@@ -117,7 +121,7 @@ def test_dataflow_evaluation_eval_no_vid2():
     df.set_actor(vid1, FuncNodeSingle({}, {}, int))
 
     dfs = DataflowState(df)
-    env = None
+    env = EvaluationEnvironment(0)
     algo = BruteEvaluation(df)
 
     dfs.set_data(pid0, 0)
@@ -138,7 +142,7 @@ def test_dataflow_evaluation_single_input_single_output():
     df.set_actor(vid, FuncNodeSingle({}, {}, operator.add))
 
     dfs = DataflowState(df)
-    env = None
+    env = EvaluationEnvironment(0)
     algo = BruteEvaluation(df)
 
     dfs.set_data(pid0, 1)
@@ -158,7 +162,7 @@ def test_dataflow_evaluation_single_input_no_output():
     df.set_actor(vid, FuncNodeRaw({}, {}, display_func))
 
     dfs = DataflowState(df)
-    env = None
+    env = EvaluationEnvironment(0)
     algo = BruteEvaluation(df)
 
     dfs.set_data(pid0, 1)
@@ -181,7 +185,7 @@ def test_dataflow_evaluation_no_input_two_outputs():
     df.set_actor(vid, FuncNodeRaw({}, {}, double_fixed_function))
 
     dfs = DataflowState(df)
-    env = None
+    env = EvaluationEnvironment(0)
     algo = BruteEvaluation(df)
 
     assert_raises(EvaluationError, lambda: algo.eval(env, dfs, vid))
@@ -209,8 +213,9 @@ def test_dataflow_evaluation_multiple_runs():
         dfs.reinit()
         dfs.set_data(pid_in, i)
 
+        env = EvaluationEnvironment(i)
         algo.clear()
-        algo.eval(None, dfs)
+        algo.eval(env, dfs)
         assert dfs.is_valid()
 
 
@@ -246,18 +251,19 @@ def test_dataflow_evaluation_dispatch_return_values():
     algo = BruteEvaluation(df)
     dfs = DataflowState(df)
 
+    env = EvaluationEnvironment(0)
     # return single value
     df.set_actor(vid, FuncNodeRaw({}, {}, f_none))
     algo.clear()
     dfs.reinit()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     for func in [f_none_tup, f1, f1_tup, ftup]:
         df.set_actor(vid, FuncNodeRaw({}, {}, func))
         algo.clear()
         dfs.reinit()
 
-        assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
+        assert_raises(EvaluationError, lambda: algo.eval(env, dfs) )
 
     ###########################
     #
@@ -276,19 +282,19 @@ def test_dataflow_evaluation_dispatch_return_values():
         df.set_actor(vid, FuncNodeRaw({}, {}, func))
         algo.clear()
         dfs.reinit()
-        assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
+        assert_raises(EvaluationError, lambda: algo.eval(env, dfs) )
 
     df.set_actor(vid, FuncNodeSingle({}, {}, f_none))
     algo.clear()
     dfs.reinit()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.get_data(pid) is None
 
     df.set_actor(vid, FuncNodeSingle({}, {}, f1))
     algo.clear()
     dfs.reinit()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.get_data(pid) == 1
 
@@ -296,28 +302,28 @@ def test_dataflow_evaluation_dispatch_return_values():
     df.set_actor(vid, FuncNodeRaw({}, {}, f_none_tup))
     algo.clear()
     dfs.reinit()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.get_data(pid) is None
 
     df.set_actor(vid, FuncNodeRaw({}, {}, f1_tup))
     algo.clear()
     dfs.reinit()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.get_data(pid) == 1
 
     df.set_actor(vid, FuncNodeSingle({}, {}, ftup))
     algo.clear()
     dfs.reinit()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.get_data(pid) == (1, 2)
 
     df.set_actor(vid, FuncNodeRaw({}, {}, ftup))
     algo.clear()
     dfs.reinit()
-    assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
+    assert_raises(EvaluationError, lambda: algo.eval(env, dfs) )
 
     ###########################
     #
@@ -337,13 +343,13 @@ def test_dataflow_evaluation_dispatch_return_values():
         df.set_actor(vid, FuncNodeRaw({}, {}, func))
         algo.clear()
         dfs.reinit()
-        assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
+        assert_raises(EvaluationError, lambda: algo.eval(env, dfs) )
 
     # return two values
     df.set_actor(vid, FuncNodeRaw({}, {}, ftup))
     algo.clear()
     dfs.reinit()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.get_data(pid1) == 1
     assert dfs.get_data(pid2) == 2
@@ -351,7 +357,7 @@ def test_dataflow_evaluation_dispatch_return_values():
     df.set_actor(vid, FuncNodeSingle({}, {}, ftup))
     algo.clear()
     dfs.reinit()
-    assert_raises(EvaluationError, lambda: algo.eval(None, dfs) )
+    assert_raises(EvaluationError, lambda: algo.eval(env, dfs) )
 
 
 def test_dataflow_evaluation_lazy():
@@ -359,12 +365,13 @@ def test_dataflow_evaluation_lazy():
     algo = LazyEvaluation(df)
 
     dfs = DataflowState(df)
+    env = EvaluationEnvironment(0)
 
     for i in range(3):
         dfs.set_data(pid_in, i)
 
         algo.clear()
-        algo.eval(None, dfs)
+        algo.eval(env, dfs)
         assert dfs.is_valid()
 
 
@@ -383,8 +390,9 @@ def test_df_eval_lazy_single_node_lazy():
     assert dfs.has_changed(pid0)
 
     # first run
+    env = EvaluationEnvironment(0)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -397,8 +405,9 @@ def test_df_eval_lazy_single_node_lazy():
     assert dfs.has_changed(pid1)
 
     # second run
+    env = EvaluationEnvironment(1)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -424,8 +433,9 @@ def test_df_eval_lazy_single_node_non_lazy():
     assert dfs.has_changed(pid0)
 
     # first run
+    env = EvaluationEnvironment(0)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -438,8 +448,9 @@ def test_df_eval_lazy_single_node_non_lazy():
     assert dfs.has_changed(pid1)
 
     # second run
+    env = EvaluationEnvironment(1)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -463,8 +474,9 @@ def test_df_eval_lazy_single_node_lazy_no_inports():
     assert df.actor(vid).is_lazy()
 
     # first run
+    env = EvaluationEnvironment(0)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -476,8 +488,9 @@ def test_df_eval_lazy_single_node_lazy_no_inports():
     assert dfs.has_changed(pid)
 
     # second run
+    env = EvaluationEnvironment(1)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -500,8 +513,9 @@ def test_df_eval_lazy_single_node_non_lazy_no_inports():
     assert not df.actor(vid).is_lazy()
 
     # first run
+    env = EvaluationEnvironment(0)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -513,8 +527,9 @@ def test_df_eval_lazy_single_node_non_lazy_no_inports():
     assert dfs.has_changed(pid)
 
     # second run
+    env = EvaluationEnvironment(1)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -546,8 +561,9 @@ def test_df_eval_lazy_two_nodes_lazy():
     assert dfs.has_changed(pid0)
 
     # first run
+    env = EvaluationEnvironment(0)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -567,8 +583,9 @@ def test_df_eval_lazy_two_nodes_lazy():
     assert dfs.has_changed(pid3)
 
     # second run
+    env = EvaluationEnvironment(1)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -604,8 +621,9 @@ def test_df_eval_lazy_two_nodes_up_nonlazy():
     assert dfs.has_changed(pid0)
 
     # first run
+    env = EvaluationEnvironment(0)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -625,8 +643,9 @@ def test_df_eval_lazy_two_nodes_up_nonlazy():
     assert dfs.has_changed(pid3)
 
     # second run
+    env = EvaluationEnvironment(1)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -666,8 +685,9 @@ def test_df_eval_lazy_two_nodes_down_nonlazy():
     assert dfs.has_changed(pid0)
 
     # first run
+    env = EvaluationEnvironment(0)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 
@@ -687,8 +707,9 @@ def test_df_eval_lazy_two_nodes_down_nonlazy():
     assert dfs.has_changed(pid3)
 
     # second run
+    env = EvaluationEnvironment(1)
     algo.clear()
-    algo.eval(None, dfs)
+    algo.eval(env, dfs)
 
     assert dfs.is_valid()
 

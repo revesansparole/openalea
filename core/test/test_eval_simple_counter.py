@@ -50,20 +50,23 @@ def test_eval_simple_counter():
     vid0 = df.add_actor(n0)
 
     state = DataflowState(df)
-    env = EvaluationEnvironment()
     algo = LazyEvaluation(df)
 
     algo.clear()
+    env = EvaluationEnvironment(0)
     algo.eval(env, state)
     assert state.get_data(0) == 0
     algo.clear()
+    env = EvaluationEnvironment(1)
     algo.eval(env, state)
     assert state.get_data(0) == 1
     algo.clear()
+    env = EvaluationEnvironment(2)
     algo.eval(env, state)
     assert state.get_data(0) == 2
 
     n0.reset()
     algo.clear()
+    env = EvaluationEnvironment(3)
     algo.eval(env, state)
     assert state.get_data(0) == 0

@@ -27,9 +27,9 @@ from provenance_exec import ProvenanceExec
 class EvaluationEnvironment(object):
     """ Environment for evaluation algorithms
     """
-    def __init__(self):
+    def __init__(self, exec_id=None):
         """ Constructor """
-        self._exec_id = None
+        self._exec_id = exec_id
         self._record_prov = False
         self._prov = None
 
@@ -48,7 +48,7 @@ class EvaluationEnvironment(object):
             self._exec_id = self._prov.new_execution(exec_id)
 
     def record_provenance(self):
-        """ Return wether or not execution provenance
+        """ Return whether or not execution provenance
         should be recorded during this execution.
         """
         return self._record_prov
@@ -66,4 +66,6 @@ class EvaluationEnvironment(object):
         """
         self._prov = ProvenanceExec(dataflow)
         self._record_prov = True
-        self._exec_id = None#self._prov.new_execution()
+        if self._exec_id is not None:
+            g = self._prov.execution_graph()
+            g.add_vertex(self._exec_id)

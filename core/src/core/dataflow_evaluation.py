@@ -93,6 +93,9 @@ class BruteEvaluation(AbstractEvaluation):
         if not state.is_ready_for_evaluation():
             raise EvaluationError("state not ready for evaluation")
 
+        if env.current_execution() is None:
+            raise EvaluationError("Current execution id is None")
+
         if vid is None:  # start evaluation from leaves in the dataflow
             df = self._dataflow
             leaves = [vid for vid in df.vertices() if df.nb_out_edges(vid) == 0]
@@ -111,7 +114,7 @@ class BruteEvaluation(AbstractEvaluation):
                 self.eval_from_node(env, state, vid)
 
         # provenance
-        if env is not None and env.record_provenance():
+        if env.record_provenance():
             prov = env.provenance()
             prov.store(env.current_execution(), state)
 
@@ -124,6 +127,10 @@ class BruteEvaluation(AbstractEvaluation):
         # add node to evaluated list to prevent
         # multiple evaluation of the same node
         self._evaluated.add(vid)
+
+        actor = self._dataflow.actor(vid)
+        if actor.get_caption() == "extra":
+            return env.handle_extra(self._dataflow, env, state, vid)
 
         # ensure that all nodes upstream of this node have been evaluated
         for nid in self._dataflow.in_neighbors(vid):
@@ -204,12 +211,20 @@ class LazyEvaluation(BruteEvaluation):
             - if node is not lazy
             - if node is lazy but inputs have changed
         """
-        df = self._dataflow
-        node = df.actor(vid)
+        if state.last_evaluation(vid) is None:  # Node needs a first evaluation anyway
+            state.set_last_evaluation(vid, env.current_execution())
+            return BruteEvaluation.eval_node(self, env, state, vid)
+        elif state.last_evaluation(vid) == env.current_execution():
+            # node has already been evaluated at this execution
+            # do nothing
+            pass  # TODO: redundant with self._evaluated????
+        else :
+            df = self._dataflow
+            node = df.actor(vid)
 
-        if node.is_lazy():
-            if state.task_already_evaluated(vid):
+            if node.is_lazy():
                 if any(state.input_has_changed(pid) for pid in df.in_ports(vid)):
+                    state.set_last_evaluation(vid, env.current_execution())
                     return BruteEvaluation.eval_node(self, env, state, vid)
                 else:  # node will not be evaluated, mark outputs as unchanged
                     # set task execution time to None
@@ -221,9 +236,6 @@ class LazyEvaluation(BruteEvaluation):
                         state.set_changed(pid, False)
 
                     return False
-            else:  # Node needs a first evaluation anyway
-                ret = BruteEvaluation.eval_node(self, env, state, vid)
-                state.set_task_already_evaluated(vid)
-                return ret
-        else:
-            return BruteEvaluation.eval_node(self, env, state, vid)
+            else:
+                state.set_last_evaluation(vid, env.current_execution())
+                return BruteEvaluation.eval_node(self, env, state, vid)

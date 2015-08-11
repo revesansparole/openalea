@@ -54,7 +54,7 @@ def test_df_eval_with_prov_init():
     df, (pid_in, pid_out) = get_dataflow()
     algo = BruteEvaluation(df)
 
-    env = EvaluationEnvironment()
+    env = EvaluationEnvironment(0)
     dfs = DataflowState(df)
     dfs.set_data(pid_in, 1)
 

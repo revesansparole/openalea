@@ -93,7 +93,7 @@ class ProvenanceExec(object):
         return eid
 
     def __contains__(self, exec_id):
-        """ Test wether the given exec_id has been stored already.
+        """ Test whether the given exec_id has been stored already.
         """
         return exec_id in self._stored
 
@@ -123,13 +123,14 @@ class ProvenanceExec(object):
             state.set_data(pid, data)
             state.set_changed(pid, changed)
 
-        for vid, (tinit, tend, already) in dv.items():
+        for vid, (tinit, tend, eid) in dv.items():
             if tinit is not None:
                 state.set_task_start_time(vid, tinit)
             if tend is not None:
                 state.set_task_end_time(vid, tend)
-            if already:
-                state.set_task_already_evaluated(vid)
+            if eid is not None:
+                state.set_last_evaluation(vid, eid)
+
 
         return state
 
