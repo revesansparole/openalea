@@ -151,12 +151,14 @@ def test_df_eval_lazy_with_prov():
     env.set_provenance(df)
     prov = env.provenance()
 
-    eids = []
-    peid = None
+    eids = [env.current_execution()]
+    algo.clear()
+    algo.eval(env, dfs)
+
     for i in range(3):
-        env.new_execution(peid)
+        env.new_execution(env.current_execution())
         eids.append(env.current_execution())
-        peid = env.current_execution()
+        
         assert env.current_execution() not in prov
 
         algo.clear()
