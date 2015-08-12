@@ -9,6 +9,7 @@ from openalea.core.dataflow_evaluation import (EvaluationError,
                                                LazyEvaluation)
 from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
 from openalea.core.node import Node, FuncNodeRaw, FuncNodeSingle
+from openalea.core.subdataflow import SubDataflow2
 
 
 def print_func(*args):
@@ -70,7 +71,17 @@ def test_dataflow_evaluation_init():
 
 
 def test_dataflow_evaluation_clone():
-    raise NotImplementedError()
+    df = get_dataflow()[0]
+    algo1 = BruteEvaluation(df)
+
+    algo2 = algo1.clone(df)
+    assert isinstance(algo2, BruteEvaluation)
+    assert id(algo2.dataflow()) == id(algo1.dataflow())
+
+    sub = SubDataflow2(df, (0,))
+    algo3 = algo1.clone(sub)
+    assert isinstance(algo3, BruteEvaluation)
+    assert id(algo3.dataflow()) != id(algo1.dataflow())
 
 
 def test_dataflow_evaluation_eval_init():

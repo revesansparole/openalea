@@ -158,7 +158,7 @@ def test_df_eval_lazy_with_prov():
     for i in range(3):
         env.new_execution(env.current_execution())
         eids.append(env.current_execution())
-        
+
         assert env.current_execution() not in prov
 
         algo.clear()
