@@ -337,8 +337,8 @@ class CompositeNode(Node):
             if isinstance(algo, (BruteEvaluation, LazyEvaluation)):
                 print "hack EVAL"
                 # create new state
-                # state = DataflowState(self._dataflow)
-                state = self._state
+                state = DataflowState(self._dataflow)  # TODO keep state over evaluations
+                # state = self._state
 
                 # fill lonely input ports if needed
                 # assume no change in dataflow at this point # TODO
@@ -351,7 +351,7 @@ class CompositeNode(Node):
                             state.set_data(pid, val)
 
                 # perform evaluation
-                env = EvaluationEnvironment()
+                env = EvaluationEnvironment(0)
                 algo.eval(env, state, vtx_id)
 
                 # copy data back in nodes
