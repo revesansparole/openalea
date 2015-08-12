@@ -18,7 +18,8 @@
 __revision__ = " $Id$ "
 
 
-from openalea.core.external import * #IGNORE:W0614
+from openalea.core.external import (Factory,
+                                    IInt, IStr, IBool, IFunction, ISequence)
 from openalea.core.pkgdict import protect
 
 
@@ -297,4 +298,32 @@ _for = Factory(name="for",
              )
 
 __all__.append('_for')
+
+
+new_while = Factory(name="whileX",
+             description="while Loop",
+             category="flow control",
+             nodemodule="openalea.core.node_control_flow",
+             nodeclass="WhileNode",
+             inputs = (dict(name="test", interface=None, value=None),
+                       dict(name="task", interface=None, value=None),
+                       ),
+             outputs = ( dict(name="out", interface=None), ),
+             )
+
+__all__.append('new_while')
+
+
+new_for = Factory(name="forX",
+             description="for Loop (Univariate)",
+             category="flow control",
+             nodemodule="openalea.core.node_control_flow",
+             nodeclass="ForNode",
+             inputs = (dict(name="iter", interface=None, value=None),
+                       dict(name="task", interface=None, value=None),
+                       ),
+             outputs = ( dict(name="out", interface=None), ),
+             )
+
+__all__.append('new_for')
 
