@@ -81,9 +81,8 @@ class WhileNode(ControlFlowNode):
         sub = get_upstream_subdataflow(df, pid_test)
 
         # eval
-        ss_test = state.clone(sub)#DataflowState(sub)
-        # ss_test.update(state)
-        algo_test = algo.clone(sub)#LazyEvaluation(sub)
+        ss_test = state.clone(sub)
+        algo_test = algo.clone(sub)
         algo_test.eval(env, ss_test)
         state.update(ss_test)
         test = state.get_data(pid_test)
@@ -94,9 +93,8 @@ class WhileNode(ControlFlowNode):
             sub = get_upstream_subdataflow(df, pid_task)
 
             #eval
-            ss_task = state.clone(sub)#DataflowState(sub)
-            # ss_task.update(state)
-            algo_task = algo.clone(sub)#LazyEvaluation(sub)
+            ss_task = state.clone(sub)
+            algo_task = algo.clone(sub)
             algo_task.eval(env, ss_task)
             state.update(ss_task)
 
