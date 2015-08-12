@@ -93,8 +93,6 @@ class WhileNode(ControlFlowNode):
         exec_id = env.current_execution()
 
         pid_out = df.out_port(vid, "out")
-        if pid_out in state and not state.has_changed(pid_out):
-            return  # 'while' already finished previous execution
 
         # find subdataflow upstream of 'test' port
         pid_test = df.in_port(vid, "test")
@@ -161,36 +159,43 @@ class ForNode(ControlFlowNode):
 
     def perform_evaluation(self, algo, env, state, vid):
         df = algo.dataflow()
+        exec_id = env.current_execution()
 
         pid_out = df.out_port(vid, "out")
-        if pid_out in state and not state.has_changed(pid_out):
-            return  # 'for' already finished previous execution
 
-        # find subdataflow upstream of 'iter' port
+        # find subdataflow upstream of 'test' port
         pid_iter = df.in_port(vid, "iter")
-        sub = get_upstream_subdataflow(df, pid_iter)
-
-        # eval
-        ss_iter = state.clone(sub)
-        algo_iter = algo.clone(sub)
-        try:
-            algo_iter.eval(env, ss_iter)
-        except StopIteration:
-            if pid_out not in state:
-                state.set_data(pid_out, None)
-            state.set_changed(pid_out, False)
-
-        state.update(ss_iter)
-
+        sub_iter = get_upstream_subdataflow(df, pid_iter)
+        ss_iter = state.clone(sub_iter)
+        algo_iter = algo.clone(sub_iter)
         # find subdataflow upstream 'task' port
         pid_task = df.in_port(vid, "task")
-        sub = get_upstream_subdataflow(df, pid_task)
+        sub_task = get_upstream_subdataflow(df, pid_task)
+        ss_task = state.clone(sub_task)
+        algo_task = algo.clone(sub_task)
 
-        # eval
-        ss_task = state.clone(sub)
-        algo_task = algo.clone(sub)
-        algo_task.eval(env, ss_task)
-        state.update(ss_task)
+        res = []
 
-        # fill ports
-        state.set_data(pid_out, state.get_data(pid_task))
+        try:
+            while True:
+                env.new_execution()
+                # eval 'iter' dataflow
+                ss_iter.update(ss_task)
+                algo_iter.clear()
+                algo_iter.eval(env, ss_iter)
+                state.update(ss_iter)
+
+                # eval "task" dataflow
+                ss_task.update(ss_iter)
+                algo_task.clear()
+                algo_task.eval(env, ss_task)
+                state.update(ss_task)
+                res.append(state.get_data(pid_task))
+        except StopIteration:
+            pass
+
+        # fill ports with result
+        state.set_data(pid_out, res)
+
+        # restore state
+        env.set_current_execution(exec_id)
