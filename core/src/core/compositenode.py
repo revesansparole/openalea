@@ -78,6 +78,9 @@ class CompositeNode(Node):
     def __len__ (self):  # TODO: hack to ensure backward compatibility
         return len(self._dataflow)
 
+    def __iter__ (self):  # TODO: hack to ensure backward compatibility
+        return iter(self._dataflow)
+
     def nodes(self):  # TODO: hack to ensure backward compatibility
         return self._dataflow.vertices()
 
@@ -202,6 +205,11 @@ class CompositeNode(Node):
             self.id_in = None
         elif vid == self.id_out:
             self.id_out = None
+
+        # TODO: some sort of hack to ensure remove_edge is called
+        for eid in tuple(self._dataflow.edges(vid)):
+            self.remove_edge(eid)
+
         self._dataflow.remove_vertex(vid)
         node.close()
         self.notify_vertex_removal(node)
