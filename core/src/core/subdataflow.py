@@ -161,6 +161,9 @@ class SubDataflow2(object):
     def actor(self, vid):
         return self._dataflow.actor(vid)
 
+    def __contains__(self, vid):
+        return vid in self._dataflow
+
 
 def get_upstream_subdataflow(dataflow, root_pid):
     """ Construct a subdataflow including all the nodes

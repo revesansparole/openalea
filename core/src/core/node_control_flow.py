@@ -58,8 +58,7 @@ class XNode(ControlFlowNode):
     control_type = "X"
 
     def __init__(self):
-        inputs = ({'name': 'key', 'interface': None},
-                  {'name': 'order', 'interface': IInt, 'default': 0})
+        inputs = ({'name': 'order', 'interface': IInt, 'default': 0},)
         outputs = ({'name': 'out'},)
 
         ControlFlowNode.__init__(self, inputs, outputs)
@@ -72,10 +71,12 @@ class WhileNode(ControlFlowNode):
     """ Implement a type of while on a dataflow.
 
     WhileNode has two input ports "test" and "task". "Task"
-    is executed and its result is forwarded on the output
-    of this node as long as "test" is true. Once "test" is
-    False, "task" is no longer executed and the output
-    of this node stays unchanged.
+    is executed and its result is stored as long as "test"
+    is true. Once "test" is False the accumulated "task"s
+    is forwarded on the output port.
+
+    result will be:
+    [task() while test()]
     """
 
     control_type = "while"
@@ -139,12 +140,10 @@ class ForNode(ControlFlowNode):
     Evaluation will exhaust the provided iterator
     until StopIteration is raised. Each time the
     actual iter value is passed to the "task",
-    "task" is executed and the result is mirrored
-    on the output of the node.
+    "task" is executed and the result is stored.
 
-    Once the loop is finished, "task" is no longer
-    evaluation and the output of the node stays
-    unchanged on the last computed value.
+    Once the loop is finished, result will be
+    [task() for i in iter()].
     """
 
     control_type = "for"
@@ -193,6 +192,81 @@ class ForNode(ControlFlowNode):
                 res.append(state.get_data(pid_task))
         except StopIteration:
             pass
+
+        # fill ports with result
+        state.set_data(pid_out, res)
+
+        # restore state
+        env.set_current_execution(exec_id)
+
+
+class MapNode(ControlFlowNode):
+    """ Implement a classical python 'map' loop.
+
+    MapNode has two input ports, "func" and "seq".
+    Evaluation will call 'func' for each item in seq.
+
+    Result will be a list of [func(i) for i in seq].
+    """
+
+    control_type = "map"
+
+    def __init__(self):
+        inputs = ({'name': 'func', 'interface': None},
+                  {'name': 'seq', 'interface': None})
+        outputs = ({'name': 'out'},)
+
+        ControlFlowNode.__init__(self, inputs, outputs)
+        self.set_lazy(False)
+
+    def perform_evaluation(self, algo, env, state, vid):
+        df = algo.dataflow()
+        exec_id = env.current_execution()
+
+        pid_out = df.out_port(vid, "out")
+
+        # find subdataflow upstream of 'func' port
+        pid_func = df.in_port(vid, "func")
+        sub_func = get_upstream_subdataflow(df, pid_func)
+        ss_func = state.clone(sub_func)
+        algo_func = algo.clone(sub_func)
+        xnodes = [(state.get_data(df.in_port(lvid, "order")),
+                   df.out_port(lvid, "out")) for lvid in sub_func.vertices()
+                    if isinstance(sub_func.actor(lvid), XNode)]
+        xnodes.sort()
+        arg_pids = [pid for order, pid in xnodes]
+
+        # find subdataflow upstream 'seq' port
+        pid_seq = df.in_port(vid, "seq")
+        sub_seq = get_upstream_subdataflow(df, pid_seq)
+        ss_seq = state.clone(sub_seq)
+        algo_seq = algo.clone(sub_seq)
+
+        # eval "seq" dataflow
+        algo_seq.eval(env, ss_seq)
+        state.update(ss_seq)
+        seq = state.get_data(pid_seq)
+
+        res = []
+        for item in seq:
+            env.new_execution()
+
+            # set item in value in ss_func if needed
+            ss_func.update(ss_seq)
+            if len(arg_pids) == 0:
+                pass
+            elif len(arg_pids) == 1:
+                ss_func.set_data(arg_pids[0], item)
+            else:
+                for pid, val in zip(arg_pids, item):
+                    ss_func.set_data(pid, val)
+
+            # eval 'func' dataflow
+            algo_func.clear()
+            algo_func.eval(env, ss_func)
+            state.update(ss_func)
+
+            res.append(state.get_data(pid_func))
 
         # fill ports with result
         state.set_data(pid_out, res)

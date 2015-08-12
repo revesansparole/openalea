@@ -189,6 +189,7 @@ def test_subdataflow_mirror_functions():
     assert sub.in_port(2, "in1") == df.in_port(2, "in1")
     assert sub.out_port(0, "out") == df.out_port(0, "out")
     assert sub.actor(0) == df.actor(0)
+    assert 0 in sub
 
 
 def test_subdataflow_get_upstream_subdataflow():

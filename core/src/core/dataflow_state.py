@@ -83,19 +83,23 @@ class DataflowState(object):
         args:
             - other (DataflowState): values to copy
         """
+        df = self._dataflow
+
         # update data on ports
         for pid, dat in other.items():
-            self.set_data(pid, dat)
-            self.set_changed(pid, other.has_changed(pid))
+            if pid in df.ports():
+                self.set_data(pid, dat)
+                self.set_changed(pid, other.has_changed(pid))
 
         # update info associated to node evaluation
         for vid, (t0, t1, exec_id) in other.tasks():
-            if t0 is not None:
-                self.set_task_start_time(vid, t0)
-            if t1 is not None:
-                self.set_task_end_time(vid, t1)
-            if exec_id is not None:
-                self.set_last_evaluation(vid, exec_id)
+            if vid in df:
+                if t0 is not None:
+                    self.set_task_start_time(vid, t0)
+                if t1 is not None:
+                    self.set_task_end_time(vid, t1)
+                if exec_id is not None:
+                    self.set_last_evaluation(vid, exec_id)
 
     def clone(self, dataflow):
         """ Clone content of this state into
@@ -232,6 +236,7 @@ class DataflowState(object):
             - data (any)
         """
         df = self._dataflow
+
         if df.is_in_port(pid) and df.nb_connections(pid) > 0:
             raise KeyError("no storage on input ports")
 

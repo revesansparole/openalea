@@ -149,10 +149,32 @@ def test_dataflow_state_update():
     assert dfs4.task_start_time(0) == 1
     assert dfs4.last_evaluation(0) is None
     assert dfs4.last_evaluation(2) == 1
+    for pid in (2, 7, 6):
+        assert pid not in dfs4
 
 
 def test_dataflow_state_clone():
-    raise NotImplementedError()
+    df = get_dataflow()
+
+    dfs1 = DataflowState(df)
+    dfs1.set_data(0, 0)
+    dfs1.set_changed(0, False)
+
+    for i, pid in enumerate([1, 2, 5, 7]):
+        dfs1.set_data(pid, i)
+
+    dfs1.set_task_start_time(0, 1)
+    dfs1.set_last_evaluation(1, 0)
+
+    sub = SubDataflow2(df, (0, 2))
+    dfs2 = dfs1.clone(sub)
+    assert dfs2.task_start_time(0) == 1
+    assert dfs2.get_data(0) == 0
+    assert not dfs2.has_changed(0)
+    assert dfs2.get_data(1) == 0
+    assert 3 not in dfs2
+    for pid in (2, 7, 6):
+        assert pid not in dfs2
 
 
 def test_dataflow_state_is_ready_for_evaluation():
