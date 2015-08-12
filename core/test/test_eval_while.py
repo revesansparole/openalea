@@ -72,20 +72,15 @@ def test_while_simple():
 
 
     state = DataflowState(df)
+    env = EvaluationEnvironment(0)
+    algo = LazyEvaluation(df)
+    algo.eval(env, state)
 
-    for i in range(10):
-        env = EvaluationEnvironment(i)
-        algo = LazyEvaluation(df)
-        algo.eval(env, state)
-        assert state.get_data(6) == 0
-        if i < 5:
-            assert state.has_changed(6)
-        else :
-            assert not state.has_changed(6)
-
-        assert session.task0 == min(i + 1, 6)
-        assert session.task1 == min(i + 1, 6)
-        assert session.task2 == min(i + 1, 5)
+    assert tuple(state.get_data(6)) == (0, 0, 0, 0, 0)
+    assert state.has_changed(6)
+    assert session.task0 == 6
+    assert session.task1 == 6
+    assert session.task2 == 5
 
 
 def test_while_diamond():
@@ -129,16 +124,11 @@ def test_while_diamond():
 
     state = DataflowState(df)
 
-    for i in range(10):
-        env = EvaluationEnvironment(i)
-        algo = LazyEvaluation(df)
-        algo.eval(env, state)
-        assert state.get_data(6) == min(2 * i, 8)
-        if i < 5:
-            assert state.has_changed(7)
-        else :
-            assert not state.has_changed(7)
-
-        assert session.task0 == min(i + 1, 6)
-        assert session.task1 == min(i + 1, 6)
-        assert session.task2 == min(i + 1, 5)
+    env = EvaluationEnvironment()
+    algo = LazyEvaluation(df)
+    algo.eval(env, state)
+    assert tuple(state.get_data(7)) == (0, 2, 4, 6, 8)
+    assert state.has_changed(7)
+    assert session.task0 == 6
+    assert session.task1 == 6
+    assert session.task2 == 5

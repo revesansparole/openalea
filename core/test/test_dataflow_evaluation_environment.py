@@ -7,7 +7,7 @@ from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
 def test_evaluation_environment_init():
     env = EvaluationEnvironment()
 
-    assert env.current_execution() is None
+    assert env.current_execution() is not None
     assert not env.record_provenance()
     assert env.provenance() is None
 
@@ -25,7 +25,7 @@ def test_evaluation_environment_set_provenance():
     assert env.record_provenance()
     prov = env.provenance()
     assert prov is not None
-    assert env.current_execution() is None
+    assert env.current_execution() in prov.execution_graph()
 
     env = EvaluationEnvironment(0)
     env.set_provenance(df)
@@ -39,8 +39,10 @@ def test_evaluation_environment_new_execution():
     df = DataFlow()
     env = EvaluationEnvironment()
 
+    cur1 = env.current_execution()
+    assert cur1 is not None
     env.new_execution()
-    assert env.current_execution() is None
+    assert env.current_execution() != cur1
 
     env.set_provenance(df)
     env.new_execution()

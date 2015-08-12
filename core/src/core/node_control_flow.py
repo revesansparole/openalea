@@ -90,6 +90,7 @@ class WhileNode(ControlFlowNode):
 
     def perform_evaluation(self, algo, env, state, vid):
         df = algo.dataflow()
+        exec_id = env.current_execution()
 
         pid_out = df.out_port(vid, "out")
         if pid_out in state and not state.has_changed(pid_out):
@@ -97,32 +98,40 @@ class WhileNode(ControlFlowNode):
 
         # find subdataflow upstream of 'test' port
         pid_test = df.in_port(vid, "test")
-        sub = get_upstream_subdataflow(df, pid_test)
+        sub_test = get_upstream_subdataflow(df, pid_test)
+        ss_test = state.clone(sub_test)
+        algo_test = algo.clone(sub_test)
+        # find subdataflow upstream 'task' port
+        pid_task = df.in_port(vid, "task")
+        sub_task = get_upstream_subdataflow(df, pid_task)
+        ss_task = state.clone(sub_task)
+        algo_task = algo.clone(sub_task)
 
-        # eval
-        ss_test = state.clone(sub)
-        algo_test = algo.clone(sub)
-        algo_test.eval(env, ss_test)
-        state.update(ss_test)
-        test = state.get_data(pid_test)
+        test = True
+        res = []
 
-        if test:
-            # find subdataflow upstream 'task' port
-            pid_task = df.in_port(vid, "task")
-            sub = get_upstream_subdataflow(df, pid_task)
+        while test:  # TODO: add limit number iter "and len(res) < max_nb_iter
+            env.new_execution()
+            # eval 'test' dataflow
+            ss_test.update(ss_task)
+            algo_test.clear()
+            algo_test.eval(env, ss_test)
+            state.update(ss_test)
+            test = state.get_data(pid_test)
 
-            #eval
-            ss_task = state.clone(sub)
-            algo_task = algo.clone(sub)
-            algo_task.eval(env, ss_task)
-            state.update(ss_task)
+            if test:
+                # eval "task" dataflow
+                ss_task.update(ss_test)
+                algo_task.clear()
+                algo_task.eval(env, ss_task)
+                state.update(ss_task)
+                res.append(state.get_data(pid_task))
 
-            # fill ports
-            state.set_data(pid_out, state.get_data(pid_task))
-        else:
-            if pid_out not in state:
-                state.set_data(pid_out, None)
-            state.set_changed(pid_out, False)
+        # fill ports with result
+        state.set_data(pid_out, res)
+
+        # restore state
+        env.set_current_execution(exec_id)
 
 
 class ForNode(ControlFlowNode):
@@ -164,7 +173,7 @@ class ForNode(ControlFlowNode):
         # eval
         ss_iter = state.clone(sub)
         algo_iter = algo.clone(sub)
-        try :
+        try:
             algo_iter.eval(env, ss_iter)
         except StopIteration:
             if pid_out not in state:
@@ -177,7 +186,7 @@ class ForNode(ControlFlowNode):
         pid_task = df.in_port(vid, "task")
         sub = get_upstream_subdataflow(df, pid_task)
 
-        #eval
+        # eval
         ss_task = state.clone(sub)
         algo_task = algo.clone(sub)
         algo_task.eval(env, ss_task)

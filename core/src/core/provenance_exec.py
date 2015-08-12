@@ -55,25 +55,26 @@ class ProvenanceExec(object):
         """
         return self._exec_graph
 
-    def new_execution(self, exec_id=None):
+    def new_execution(self, parent_id=None, exec_id=None):
         """ Create a new execution instance.
 
-        If exec_id is not None, the new execution
+        If parent_id is not None, the new execution
         will be seen as its daughter
 
         args:
-            - exec_id (eid): id of reference execution
+            - parent_id (eid): id of reference execution
+            - exec_id (eid): suggested if for the new execution
 
         return:
-            - eid: id of new execution
+            - (eid): id of new execution
         """
-        if exec_id is not None and exec_id not in self._exec_graph:
-            raise KeyError("invalid exec_id")
+        if parent_id is not None and parent_id not in self._exec_graph:
+            raise KeyError("invalid parent_id")
 
-        eid = self._exec_graph.add_vertex()
+        eid = self._exec_graph.add_vertex(exec_id)
 
-        if exec_id is not None:
-            self._exec_graph.add_edge((exec_id, eid))
+        if parent_id is not None:
+            self._exec_graph.add_edge((parent_id, eid))
 
         return eid
 
