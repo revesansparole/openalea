@@ -35,10 +35,11 @@ class ControlFlowNode(Node):
     method is used.
     """
 
-    control_type = "abstract"  # id of this type of node
-
     def __init__(self, inputs=(), outputs=()):
         Node.__init__(self, inputs, outputs)
+
+    def __call__(self, inputs=()):
+        pass
 
     def perform_evaluation(self, algo, env, state, vid):
         """ Perform evaluation of this node and
@@ -54,9 +55,6 @@ class XNode(ControlFlowNode):
     """ Does nothing but allow to add arguments
     in a loop of any sort.
     """
-
-    control_type = "X"
-
     def __init__(self):
         inputs = ({'name': 'order', 'interface': IInt, 'default': 0},)
         outputs = ({'name': 'out'},)
@@ -78,9 +76,6 @@ class WhileNode(ControlFlowNode):
     result will be:
     [task() while test()]
     """
-
-    control_type = "while"
-
     def __init__(self):
         inputs = ({'name': 'test', 'interface': None},
                   {'name': 'task', 'interface': None})
@@ -145,9 +140,6 @@ class ForNode(ControlFlowNode):
     Once the loop is finished, result will be
     [task() for i in iter()].
     """
-
-    control_type = "for"
-
     def __init__(self):
         inputs = ({'name': 'iter', 'interface': None},
                   {'name': 'task', 'interface': None})
@@ -208,9 +200,6 @@ class MapNode(ControlFlowNode):
 
     Result will be a list of [func(i) for i in seq].
     """
-
-    control_type = "map"
-
     def __init__(self):
         inputs = ({'name': 'func', 'interface': None},
                   {'name': 'seq', 'interface': None})
@@ -232,7 +221,7 @@ class MapNode(ControlFlowNode):
         algo_func = algo.clone(sub_func)
         xnodes = [(state.get_data(df.in_port(lvid, "order")),
                    df.out_port(lvid, "out")) for lvid in sub_func.vertices()
-                    if isinstance(sub_func.actor(lvid), XNode)]
+                  if isinstance(sub_func.actor(lvid), XNode)]
         xnodes.sort()
         arg_pids = [pid for order, pid in xnodes]
 
