@@ -9,7 +9,8 @@ from openalea.core.actor import IActor
 from openalea.core.dataflow import (DataFlow,
                                     PortError,
                                     InvalidActor,
-                                    InvalidVertex)
+                                    InvalidVertex,
+                                    hash_dataflow)
 
 
 class DummyActor(IActor):
@@ -538,3 +539,27 @@ def test_dataflow_big():
     except PortError:
         test = True
     assert test
+
+
+def test_hash_dataflow():
+    df1 = DataFlow()
+    df2 = DataFlow()
+
+    assert hash_dataflow(df1) == hash_dataflow(df2)
+
+    df1.add_vertex(0)
+    assert hash_dataflow(df1) != hash_dataflow(df2)
+
+    df2.add_vertex(0)
+    assert hash_dataflow(df1) == hash_dataflow(df2)
+    df2.remove_vertex(0)
+    assert hash_dataflow(df1) != hash_dataflow(df2)
+    df2.add_vertex(1)
+    assert hash_dataflow(df1) != hash_dataflow(df2)
+
+    df1.add_vertex(1)
+    df2.add_vertex(0)
+    df1.add_edge((0, 1), 0)
+    assert hash_dataflow(df1) != hash_dataflow(df2)
+    df2.add_edge((0, 1), 0)
+    assert hash_dataflow(df1) == hash_dataflow(df2)

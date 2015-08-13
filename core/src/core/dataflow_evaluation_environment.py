@@ -38,8 +38,15 @@ class EvaluationEnvironment(object):
         self._id_gen = IdGenerator()
 
         self._exec_id = self._id_gen.get_id(exec_id)
-        self._record_prov = False
         self._prov = None
+
+    def clear(self):
+        """ Clear environment
+        """
+        self._id_gen = IdGenerator()
+        self._exec_id = self._id_gen.get_id()
+        if self.record_provenance():
+            self._prov.clear()
 
     def current_execution(self):
         """ Return id of current execution.
@@ -60,14 +67,14 @@ class EvaluationEnvironment(object):
         """
         self._exec_id = self._id_gen.get_id()
 
-        if self._prov is not None:
+        if self.record_provenance():
             self._prov.new_execution(exec_id, self._exec_id)
 
     def record_provenance(self):
         """ Return whether or not execution provenance
         should be recorded during this execution.
         """
-        return self._record_prov
+        return self._prov is not None
 
     def provenance(self):
         """ Return provenance object to use.
@@ -81,7 +88,6 @@ class EvaluationEnvironment(object):
             - dataflow (DataFlow): dataflow to observe
         """
         self._prov = ProvenanceExec(dataflow)
-        self._record_prov = True
 
         g = self._prov.execution_graph()
         g.add_vertex(self._exec_id)

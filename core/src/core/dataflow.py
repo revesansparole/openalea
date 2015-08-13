@@ -19,6 +19,8 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
+from hashlib import sha512
+
 from openalea.core.graph.property_graph import PropertyGraph, InvalidVertex
 from openalea.core.graph.property_graph import InvalidEdge
 from openalea.core.graph.id_generator import IdGenerator
@@ -554,3 +556,11 @@ class DataFlow(PropertyGraph):
     #                 if (not nvid in processed):
     #                     scan_list.append(nvid)
 
+
+def hash_dataflow (dataflow):
+    """ Compute a hash value to estimate
+    when a dataflow has been edited.
+    """
+    vids = sorted(dataflow.vertices())
+    eids = sorted(dataflow.edges())
+    return sha512(str(vids) + str(eids)).digest()

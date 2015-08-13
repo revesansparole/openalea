@@ -26,12 +26,12 @@ __revision__ = " $Id$ "
 
 import copy
 
-from openalea.core.dataflow_evaluation import BruteEvaluation, LazyEvaluation
-from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
-from openalea.core.dataflow_state import DataflowState
+from .dataflow_evaluation import BruteEvaluation, LazyEvaluation
+from dataflow_evaluation_environment import EvaluationEnvironment
+from dataflow_state import DataflowState
 
-from openalea.core.node import RecursionError, Node
-from openalea.core.dataflow import DataFlow, InvalidEdge, PortError
+from node import RecursionError, Node
+from dataflow import DataFlow, InvalidEdge, PortError, hash_dataflow
 
 import logger
 
@@ -69,7 +69,11 @@ class CompositeNode(Node):
         self.graph_modified = False
         self.evaluating = False
         self.eval_algo = "default"
+
+        # objects used by new evaluation algorithms
+        self._eval_env = EvaluationEnvironment()
         self._state = DataflowState(self._dataflow)
+        self._dataflow_hash = hash_dataflow(self._dataflow)
 
     def node(self, vid):
         """ Convenience function """
@@ -344,28 +348,38 @@ class CompositeNode(Node):
             # TODO: HACK to switch to new eval algo
             if isinstance(algo, (BruteEvaluation, LazyEvaluation)):
                 print "hack EVAL"
-                # create new state
-                state = DataflowState(self._dataflow)  # TODO keep state over evaluations
-                # state = self._state
+                df = self._dataflow
+                env = self._eval_env
+
+                # create new state if dataflow has been edited
+                h = hash_dataflow(df)
+                if h != self._dataflow_hash:
+                    self._dataflow_hash = h
+                    env.clear()
+                    self._state = DataflowState(df)
+
+                # state = DataflowState(self._dataflow)  # TODO keep state over evaluations
+                state = self._state
 
                 # fill lonely input ports if needed
                 # assume no change in dataflow at this point # TODO
-                for pid in self._dataflow.in_ports():
-                    if self._dataflow.nb_connections(pid) == 0:
+                for pid in df.in_ports():
+                    if df.nb_connections(pid) == 0:
                         if pid not in state._state: # TODO: hack access internal
-                            node = self.node(self._dataflow.vertex(pid))
-                            lpid = self._dataflow.local_id(pid)
+                            node = self.node(df.vertex(pid))
+                            lpid = df.local_id(pid)
                             val = node.inputs[lpid]
                             state.set_data(pid, val)
 
                 # perform evaluation
-                env = EvaluationEnvironment(0)
+                env.new_execution()
+                algo.clear()
                 algo.eval(env, state, vtx_id)
 
                 # copy data back in nodes
-                for pid in self._dataflow.out_ports():
+                for pid in df.out_ports():
                     node = self.node(self._dataflow.vertex(pid))
-                    lpid = self._dataflow.local_id(pid)
+                    lpid = df.local_id(pid)
                     val = state.get_data(pid)
                     node.set_output(lpid, val)
             else:  # old algos

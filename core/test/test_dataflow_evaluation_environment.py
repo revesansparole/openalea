@@ -17,6 +17,17 @@ def test_evaluation_environment_init():
     assert env.provenance() is None
 
 
+def test_evaluation_environment_clear():
+    env = EvaluationEnvironment()
+
+    for i in range(3):
+        env.new_execution()
+
+    env.clear()
+
+    assert env.current_execution() == 0  # TODO: hack bad test
+
+
 def test_evaluation_environment_set_provenance():
     df = DataFlow()
     env = EvaluationEnvironment()
@@ -49,4 +60,3 @@ def test_evaluation_environment_new_execution():
     eid = env.current_execution()
     prov = env.provenance()
     assert eid in prov.execution_graph()
-
