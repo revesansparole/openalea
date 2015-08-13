@@ -20,6 +20,7 @@ __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
 
+from dataflow import PortError
 from interface import IInt
 from node import Node
 from subdataflow import get_upstream_subdataflow
@@ -65,6 +66,35 @@ class XNode(ControlFlowNode):
         pass
 
 
+class IterNode(Node):  # TODO: hack not in the right place
+    """ Iterate over a sequence
+    """
+    def __init__(self, inputs=(), outputs=()):
+        Node.__init__(self, inputs, outputs)
+
+        self._seq = None
+        self._iter = None
+
+    def reset(self):
+        Node.reset(self)
+        self._seq = None
+        self._iter = None
+
+    def __call__(self, *args):
+        seq, = args
+        if len(seq) == 1:  #TODO: GRUUIK hack because of bad definition of list
+            seq = seq[0]
+
+        if self._seq is None:
+            self._seq = seq
+            self._iter = iter(self._seq)
+        # elif id(seq) != id(self._seq):  # TODO: correct this bug and reintroduce this case
+        #         self._seq = seq
+        #         self._iter = iter(self._seq)
+
+        return self._iter.next(),
+
+
 class WhileNode(ControlFlowNode):
     """ Implement a type of while on a dataflow.
 
@@ -82,21 +112,29 @@ class WhileNode(ControlFlowNode):
         outputs = ({'name': 'out'},)
 
         ControlFlowNode.__init__(self, inputs, outputs)
-        self.set_lazy(False)
 
     def perform_evaluation(self, algo, env, state, vid):
         df = algo.dataflow()
         exec_id = env.current_execution()
 
-        pid_out = df.out_port(vid, "out")
+        try:  # TODO: hack to work around visualea re implementation of local id
+            pid_out = df.out_port(vid, "out")
+        except PortError:
+            pid_out = df.out_port(vid, 0)
 
         # find subdataflow upstream of 'test' port
-        pid_test = df.in_port(vid, "test")
+        try:
+            pid_test = df.in_port(vid, "test")
+        except PortError:
+            pid_test = df.in_port(vid, 0)
         sub_test = get_upstream_subdataflow(df, pid_test)
         ss_test = state.clone(sub_test)
         algo_test = algo.clone(sub_test)
         # find subdataflow upstream 'task' port
-        pid_task = df.in_port(vid, "task")
+        try:
+            pid_task = df.in_port(vid, "task")
+        except PortError:
+            pid_task = df.in_port(vid, 1)
         sub_task = get_upstream_subdataflow(df, pid_task)
         ss_task = state.clone(sub_task)
         algo_task = algo.clone(sub_task)
@@ -146,21 +184,29 @@ class ForNode(ControlFlowNode):
         outputs = ({'name': 'out'},)
 
         ControlFlowNode.__init__(self, inputs, outputs)
-        self.set_lazy(False)
 
     def perform_evaluation(self, algo, env, state, vid):
         df = algo.dataflow()
         exec_id = env.current_execution()
 
-        pid_out = df.out_port(vid, "out")
+        try:  # TODO: hack to work around visualea re implementation of local id
+            pid_out = df.out_port(vid, "out")
+        except PortError:
+            pid_out = df.out_port(vid, 0)
 
-        # find subdataflow upstream of 'test' port
-        pid_iter = df.in_port(vid, "iter")
+        # find subdataflow upstream of 'iter' port
+        try:
+            pid_iter = df.in_port(vid, "iter")
+        except PortError:
+            pid_iter = df.in_port(vid, 0)
         sub_iter = get_upstream_subdataflow(df, pid_iter)
         ss_iter = state.clone(sub_iter)
         algo_iter = algo.clone(sub_iter)
         # find subdataflow upstream 'task' port
-        pid_task = df.in_port(vid, "task")
+        try:
+            pid_task = df.in_port(vid, "task")
+        except PortError:
+            pid_task = df.in_port(vid, 1)
         sub_task = get_upstream_subdataflow(df, pid_task)
         ss_task = state.clone(sub_task)
         algo_task = algo.clone(sub_task)
@@ -206,27 +252,49 @@ class MapNode(ControlFlowNode):
         outputs = ({'name': 'out'},)
 
         ControlFlowNode.__init__(self, inputs, outputs)
-        self.set_lazy(False)
 
     def perform_evaluation(self, algo, env, state, vid):
         df = algo.dataflow()
         exec_id = env.current_execution()
 
-        pid_out = df.out_port(vid, "out")
+        try:  # TODO: hack to work around visualea re implementation of local id
+            pid_out = df.out_port(vid, "out")
+        except PortError:
+            pid_out = df.out_port(vid, 0)
 
         # find subdataflow upstream of 'func' port
-        pid_func = df.in_port(vid, "func")
+        try:
+            pid_func = df.in_port(vid, "func")
+        except PortError:
+            pid_func = df.in_port(vid, 0)
         sub_func = get_upstream_subdataflow(df, pid_func)
         ss_func = state.clone(sub_func)
         algo_func = algo.clone(sub_func)
-        xnodes = [(state.get_data(df.in_port(lvid, "order")),
-                   df.out_port(lvid, "out")) for lvid in sub_func.vertices()
-                  if isinstance(sub_func.actor(lvid), XNode)]
+        # xnodes = [(state.get_data(df.in_port(lvid, "order")),
+        #            df.out_port(lvid, "out")) for lvid in sub_func.vertices()
+        #           if isinstance(sub_func.actor(lvid), XNode)]
+        # TODO: hack to replcae code above in visualea
+        xnodes = []
+        for lvid in sub_func.vertices():
+            if isinstance(sub_func.actor(lvid), XNode):
+                try:
+                    pout = df.out_port(lvid, "out")
+                except PortError:
+                    pout = df.out_port(lvid, 0)
+                try:
+                    pid_order = df.in_port(lvid, "order")
+                except PortError:
+                    pid_order = df.in_port(lvid, 0)
+                xnodes.append((pid_order, pout))
+
         xnodes.sort()
         arg_pids = [pid for order, pid in xnodes]
 
         # find subdataflow upstream 'seq' port
-        pid_seq = df.in_port(vid, "seq")
+        try:
+            pid_seq = df.in_port(vid, "seq")
+        except PortError:
+            pid_seq = df.in_port(vid, 1)
         sub_seq = get_upstream_subdataflow(df, pid_seq)
         ss_seq = state.clone(sub_seq)
         algo_seq = algo.clone(sub_seq)

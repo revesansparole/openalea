@@ -292,6 +292,29 @@ _for = Factory(name="for",
 
 __all__.append('_for')
 
+new_x = Factory(name="XX",
+                  description="X arg",
+                  category="flow control",
+                  nodemodule="openalea.core.node_control_flow",
+                  nodeclass="XNode",
+                  inputs=(dict(name="order", interface=IInt, value=0),),
+                  outputs=(dict(name="out", interface=None),),
+                  )
+
+__all__.append('new_x')
+
+new_iter = Factory(name="iterX",
+                  description="iter over sequence",
+                  category="flow control",
+                  nodemodule="openalea.core.node_control_flow",
+                  nodeclass="IterNode",
+                  inputs=(dict(name="seq", interface=ISequence),),
+                  outputs=(dict(name="out", interface=None),),
+                  lazy=False,
+                  )
+
+__all__.append('new_iter')
+
 new_while = Factory(name="whileX",
                     description="while Loop",
                     category="flow control",
@@ -306,7 +329,7 @@ new_while = Factory(name="whileX",
 __all__.append('new_while')
 
 new_for = Factory(name="forX",
-                  description="for Loop (Univariate)",
+                  description="for Loop",
                   category="flow control",
                   nodemodule="openalea.core.node_control_flow",
                   nodeclass="ForNode",
@@ -317,3 +340,16 @@ new_for = Factory(name="forX",
                   )
 
 __all__.append('new_for')
+
+new_map = Factory(name="mapX",
+                  description="map loop",
+                  category="flow control",
+                  nodemodule="openalea.core.node_control_flow",
+                  nodeclass="MapNode",
+                  inputs=(dict(name="func", interface=None, value=None),
+                          dict(name="seq", interface=None, value=None),
+                          ),
+                  outputs=(dict(name="out", interface=None),),
+                  )
+
+__all__.append('new_map')
