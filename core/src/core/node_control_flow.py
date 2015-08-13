@@ -285,7 +285,7 @@ class MapNode(ControlFlowNode):
                     pid_order = df.in_port(lvid, "order")
                 except PortError:
                     pid_order = df.in_port(lvid, 0)
-                xnodes.append((pid_order, pout))
+                xnodes.append((state.get_data(pid_order), pout))
 
         xnodes.sort()
         arg_pids = [pid for order, pid in xnodes]

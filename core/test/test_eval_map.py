@@ -159,8 +159,9 @@ def test_eval_map_double_x():
     state = DataflowState(df)
     state.set_data(ip(0, "order"), 0)
     state.set_data(ip(1, "order"), 1)
+    env = EvaluationEnvironment()
 
-    env = EvaluationEnvironment(0)
+    env.new_execution()
     algo = LazyEvaluation(df)
     algo.eval(env, state)
 
@@ -173,7 +174,7 @@ def test_eval_map_double_x():
     state.set_data(ip(0, "order"), 1)
     state.set_data(ip(1, "order"), 0)
 
-    env = EvaluationEnvironment(0)
+    env.new_execution()
     algo = LazyEvaluation(df)
     algo.eval(env, state)
 
