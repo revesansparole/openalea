@@ -1,5 +1,5 @@
 from nose.tools import assert_raises
-import operator
+from time import sleep
 
 from openalea.core.dataflow import DataFlow
 from openalea.core.dataflow_state import DataflowState
@@ -9,15 +9,28 @@ from openalea.core.dataflow_evaluation_environment import EvaluationEnvironment
 from openalea.core.node import Node, FuncNode
 
 
+def int_func(a):
+    sleep(0.001)
+    return int(a)
+
+
+def add_func(a, b):
+    sleep(0.001)
+    return a + b
+
+
 def print_func(*args):
+    sleep(0.001)
     print "print_func", args
 
 
 def fixed_function():
+    sleep(0.001)
     return 5
 
 
 def double_fixed_function():
+    sleep(0.001)
     return 5, 5
 
 
@@ -42,9 +55,9 @@ def get_dataflow():
     df.connect(pid21, pid32)
     df.connect(pid33, pid41)
 
-    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.set_actor(vid1, FuncNode({}, {}, int_func))
     df.set_actor(vid2, FuncNode({}, {}, fixed_function))
-    df.set_actor(vid3, FuncNode({}, {}, operator.add))
+    df.set_actor(vid3, FuncNode({}, {}, add_func))
     df.set_actor(vid4, FuncNode({}, {}, print_func))
 
     return df, (pid10, pid42)
@@ -135,11 +148,11 @@ def test_df_eval_lazy_with_prov():
     vid0 = df.add_vertex()
     pid0 = df.add_in_port(vid0, "in")
     pid1 = df.add_out_port(vid0, "out")
-    df.set_actor(vid0, FuncNode({}, {}, int))
+    df.set_actor(vid0, FuncNode({}, {}, int_func))
     vid1 = df.add_vertex()
     pid2 = df.add_in_port(vid1, "in")
     pid3 = df.add_out_port(vid1, "out")
-    df.set_actor(vid1, FuncNode({}, {}, int))
+    df.set_actor(vid1, FuncNode({}, {}, int_func))
     df.connect(pid1, pid2)
     df.actor(vid1).set_lazy(False)
 

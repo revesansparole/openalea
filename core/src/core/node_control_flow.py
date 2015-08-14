@@ -82,7 +82,7 @@ class IterNode(Node):  # TODO: hack not in the right place
 
     def __call__(self, *args):
         seq, = args
-        if len(seq) == 1:  #TODO: GRUUIK hack because of bad definition of list
+        if len(seq) == 1:  # TODO: GRUUIK hack because of bad definition of list
             seq = seq[0]
 
         if self._seq is None:
@@ -273,7 +273,7 @@ class MapNode(ControlFlowNode):
         # xnodes = [(state.get_data(df.in_port(lvid, "order")),
         #            df.out_port(lvid, "out")) for lvid in sub_func.vertices()
         #           if isinstance(sub_func.actor(lvid), XNode)]
-        # TODO: hack to replcae code above in visualea
+        # TODO: hack to replace code above in visualea
         xnodes = []
         for lvid in sub_func.vertices():
             if isinstance(sub_func.actor(lvid), XNode):
@@ -300,6 +300,7 @@ class MapNode(ControlFlowNode):
         algo_seq = algo.clone(sub_seq)
 
         # eval "seq" dataflow
+        env.new_execution()
         algo_seq.eval(env, ss_seq)
         state.update(ss_seq)
         seq = state.get_data(pid_seq)

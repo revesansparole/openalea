@@ -20,7 +20,7 @@ to store data exchanged between nodes of a dataflow.
 __license__ = "Cecill-C"
 __revision__ = " $Id$ "
 
-from time import clock
+from time import time
 
 
 class DataflowState(object):
@@ -92,14 +92,15 @@ class DataflowState(object):
                 self.set_changed(pid, other.has_changed(pid))
 
         # update info associated to node evaluation
-        for vid, (t0, t1, exec_id) in other.tasks():
+        for vid, (t0, t1) in other.tasks():
             if vid in df:
-                if t0 is not None:
-                    self.set_task_start_time(vid, t0)
-                if t1 is not None:
-                    self.set_task_end_time(vid, t1)
-                if exec_id is not None:
-                    self.set_last_evaluation(vid, exec_id)
+                self.set_task_start_time(vid, t0)
+                self.set_task_end_time(vid, t1)
+
+        # update last evaluation info
+        for vid, exec_id in other.last_evaluations():
+            if vid in df:
+                self.set_last_evaluation(vid, exec_id)
 
     def clone(self, dataflow):
         """ Clone content of this state into
@@ -216,7 +217,7 @@ class DataflowState(object):
             return state[pid]
         elif df.is_out_port(pid):
             raise KeyError("value not set for this port")
-        else:
+        else:  # input port
             npids = list(df.connected_ports(pid))
             if len(npids) == 0:
                 raise KeyError("lonely in_port not set")
@@ -267,13 +268,13 @@ class DataflowState(object):
         if df.is_out_port(pid):
             raise KeyError("must be an input port")
 
-        # case of a top node
+        # case of a lonely input node
         if df.nb_connections(pid) == 0:
-            return self._changed.get(pid, True)
+            return self.has_changed(pid)
 
         # case of a node connected to other nodes upstream
         for npid in df.connected_ports(pid):
-            if self._changed.get(npid, True):
+            if self.has_changed(npid):
                 return True
 
         return False
@@ -289,6 +290,17 @@ class DataflowState(object):
             raise KeyError("no data on given port")
 
         self._changed[pid] = flag
+
+    def last_evaluations(self):
+        """ Iterate over all nodes that have been evaluated
+        at some point.
+
+        return:
+            - (iter of (vid|exec_id))
+        """
+        for vid, exec_id in self._last_evaluation.items():
+            if exec_id is not None:
+                yield vid, exec_id
 
     def last_evaluation(self, vid):
         """ Retrieve execution id of last evaluation of this node.
@@ -339,7 +351,7 @@ class DataflowState(object):
         args:
             - vid (vid): id of task that just started
         """
-        self._task_start[vid] = clock()
+        self._task_start[vid] = time()
 
     def task_end_time(self, vid):
         """ Return time of end of task evaluation.
@@ -368,7 +380,7 @@ class DataflowState(object):
         args:
             - vid (vid): id of task that just started
         """
-        self._task_end[vid] = clock()
+        self._task_end[vid] = time()
 
     def tasks(self):
         """ Iterate on all tasks and evaluation times.
@@ -378,6 +390,5 @@ class DataflowState(object):
                     tuple of task id, (tinit, tend, last_execution_id)
         """
         for vid in self._dataflow.vertices():
-            yield vid, (self._task_start[vid],
-                        self._task_end[vid],
-                        self._last_evaluation[vid])
+            if self._task_start[vid] is not None:
+                yield vid, (self._task_start[vid], self._task_end[vid])

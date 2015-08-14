@@ -22,7 +22,11 @@ __revision__ = " $Id$ "
 
 
 from dataflow_state import DataflowState
-from graph import Graph
+from graph import PropertyGraph
+
+
+EDGE_NEXT = '>'
+EDGE_SUB = '/'
 
 
 class ProvenanceExec(object):
@@ -36,7 +40,8 @@ class ProvenanceExec(object):
             - dataflow (DataFlow): the dataflow to survey
         """
         self._dataflow = dataflow
-        self._exec_graph = Graph()
+        self._exec_graph = PropertyGraph()
+        self._exec_graph.add_edge_property("type")
         self._stored = {}
 
     def clear(self):
@@ -55,14 +60,55 @@ class ProvenanceExec(object):
         """
         return self._exec_graph
 
-    def new_execution(self, parent_id=None, exec_id=None):
+    def add_link(self, parent_id, daughter_id, rel_type=EDGE_NEXT):
+        """ Create a link between two executions
+
+        args:
+            - parent_id (eid)
+            - daughter_id (eid)
+            - rel_type ('>'|'/') default '>': type of relation with
+                              parent execution
+        """
+        g = self._exec_graph
+
+        if rel_type not in [EDGE_NEXT, EDGE_SUB]:
+            raise KeyError("Unrecognized type of relation")
+
+        if daughter_id == parent_id:
+            raise KeyError("Parent and daughter are the same")
+
+        if daughter_id in g.out_neighbors(parent_id):
+            raise KeyError("Executions already connected")
+
+        if parent_id in g.out_neighbors(daughter_id):
+            raise KeyError("Daughter is already parent of parent")
+
+        if rel_type == EDGE_NEXT:
+            for eid in g.out_edges(parent_id):
+                if g.edge_property("type")[eid] == EDGE_NEXT:
+                    raise KeyError("only one '>' out of a node")
+
+        if rel_type == EDGE_SUB:
+            for eid in g.in_edges(daughter_id):
+                if g.edge_property("type")[eid] == EDGE_SUB:
+                    raise KeyError("exec can not be subdivision of two execs")
+
+        eid = g.add_edge((parent_id, daughter_id))
+        g.edge_property('type')[eid] = rel_type
+
+    def new_execution(self, parent_id=None, rel_type=EDGE_NEXT, exec_id=None):
         """ Create a new execution instance.
 
         If parent_id is not None, the new execution
-        will be seen as its daughter
+        will be seen as its daughter. The type of relation
+        is coded in rel_type:
+            - '>': second execution of the same dataflow
+            - '/': execution of a subpart of the dataflow
 
         args:
             - parent_id (eid): id of reference execution
+            - rel_type ('>'|'/') default '>': type of relation with
+                              parent execution
             - exec_id (eid): suggested if for the new execution
 
         return:
@@ -74,23 +120,8 @@ class ProvenanceExec(object):
         eid = self._exec_graph.add_vertex(exec_id)
 
         if parent_id is not None:
-            self._exec_graph.add_edge((parent_id, eid))
+            self.add_link(parent_id, eid, rel_type)
 
-        return eid
-
-    def parent_execution(self, exec_id):
-        """ Retrieve execution connected to this one.
-
-        args:
-            - exec_id (eid): id of execution whose parent is unknown
-
-        return:
-            - parent id (eid) or None if no parent
-        """
-        if self._exec_graph.nb_in_edges(exec_id) == 0:
-            return None
-
-        eid, = self._exec_graph.in_neighbors(exec_id)
         return eid
 
     def __contains__(self, exec_id):
@@ -124,14 +155,9 @@ class ProvenanceExec(object):
             state.set_data(pid, data)
             state.set_changed(pid, changed)
 
-        for vid, (tinit, tend, eid) in dv.items():
-            if tinit is not None:
-                state.set_task_start_time(vid, tinit)
-            if tend is not None:
-                state.set_task_end_time(vid, tend)
-            if eid is not None:
-                state.set_last_evaluation(vid, eid)
-
+        for vid, (tinit, tend) in dv.items():
+            state.set_task_start_time(vid, tinit)
+            state.set_task_end_time(vid, tend)
 
         return state
 
@@ -158,6 +184,79 @@ class ProvenanceExec(object):
 
         self._stored[exec_id] = (dp, dv)
 
+    def start_time(self, vid, exec_id):
+        state = self.get_state(exec_id)  # TODO: optimize
+        return state.task_start_time(vid)
+
+    def find_same_level(self, exec_id):
+        """ Return ordered list of execution
+        at this level of decomposition.
+
+        more recent executions first
+        """
+        g = self._exec_graph
+
+        sub = []
+
+        # look for earlier executions
+        front = [exec_id]
+        while len(front) > 0:
+            cur = front.pop(0)
+            sub.append(cur)
+            for eid in g.in_edges(cur):
+                if g.edge_property("type")[eid] == EDGE_NEXT:
+                    front.append(g.source(eid))  # implicit only one '>' link
+
+        # look for past executions
+        front = [sub.pop(0)]
+        while len(front) > 0:
+            cur = front.pop(0)
+            sub.insert(0, cur)
+            for eid in g.out_edges(cur):
+                if g.edge_property("type")[eid] == EDGE_NEXT:
+                    front.append(g.target(eid))  # implicit only one '>' link
+
+        return tuple(sub)
+
+    def _last_evaluation(self, vid, exec_id):
+        g = self._exec_graph
+        visited = set()
+        front = [exec_id]
+
+        while len(front) > 0:
+            cur = front.pop(-1)
+            visited.add(cur)
+            if self.start_time(vid, cur) is not None:
+                return cur
+
+            # need to add next exec_id to visit in reverse order
+            # visit level above
+            for eid in g.in_edges(cur):
+                if g.edge_property("type")[eid] == EDGE_SUB:
+                    n_exec_id = g.source(eid)
+                    if n_exec_id not in visited:
+                        front.append(g.source(eid))
+
+            # visit previous exec at same level
+            for eid in g.in_edges(cur):
+                if g.edge_property("type")[eid] == EDGE_NEXT:
+                    n_exec_id = g.source(eid)
+                    if n_exec_id not in visited:
+                        front.append(g.source(eid))
+
+            # visit level below
+            subs = set()
+            for eid in g.out_edges(cur):
+                if g.edge_property("type")[eid] == EDGE_SUB:
+                    subs.add(self.find_same_level(g.target(eid)))
+
+            for sub in subs:
+                n_exec_id = sub[0]  # consider only the most recent of all
+                if n_exec_id not in visited:
+                    front.append(n_exec_id)
+
+        raise UserWarning("no valid evaluation found")
+
     def last_evaluation(self, vid, exec_id=None):
         """ Find last execution id where node has been evaluated.
 
@@ -178,7 +277,6 @@ class ProvenanceExec(object):
         if exec_id is None:
             # find leaves of the execution graph
             leaves = [eid for eid in g.vertices() if g.nb_out_edges(eid) == 0]
-            print "leaves", leaves, tuple(g.vertices())
             if len(leaves) == 0:
                 raise UserWarning("no execution recorded yet")
             elif len(leaves) > 1:
@@ -187,15 +285,7 @@ class ProvenanceExec(object):
             else:
                 exec_id, = leaves
 
-        state = self.get_state(exec_id)  # TODO: optimize
-        if state.task_start_time(vid) is None:
-            if g.nb_in_neighbors(exec_id) == 0:
-                raise UserWarning("no valid evaluation found")
-
-            p_exec, = tuple(g.in_neighbors(exec_id))
-            return self.last_evaluation(vid, p_exec)
-        else:
-            return exec_id
+        return self._last_evaluation(vid, exec_id)
 
     def last_change(self, pid, exec_id):
         """ Find the last evaluation that changed this port.

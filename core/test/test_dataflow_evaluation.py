@@ -1,5 +1,6 @@
 from nose.tools import assert_raises
 import operator
+from time import sleep
 
 from openalea.core.dataflow import DataFlow
 from openalea.core.dataflow_state import DataflowState
@@ -22,11 +23,17 @@ def display_func(*args):
 
 
 def fixed_function():
+    sleep(0.001)
     return 5
 
 
 def double_fixed_function():
     return 5, 5
+
+
+def int_function(a):
+    sleep(0.001)
+    return a
 
 
 def get_dataflow():
@@ -395,7 +402,7 @@ def test_df_eval_lazy_single_node_lazy():
     vid = df.add_vertex()
     pid0 = df.add_in_port(vid, "in")
     pid1 = df.add_out_port(vid, "out")
-    df.set_actor(vid, FuncNodeSingle({}, {}, int))
+    df.set_actor(vid, FuncNodeSingle({}, {}, int_function))
 
     algo = LazyEvaluation(df)
     dfs = DataflowState(df)
@@ -437,7 +444,7 @@ def test_df_eval_lazy_single_node_non_lazy():
     vid = df.add_vertex()
     pid0 = df.add_in_port(vid, "in")
     pid1 = df.add_out_port(vid, "out")
-    df.set_actor(vid, FuncNodeSingle({}, {}, int))
+    df.set_actor(vid, FuncNodeSingle({}, {}, int_function))
     df.actor(vid).set_lazy(False)
 
     algo = LazyEvaluation(df)
@@ -619,11 +626,11 @@ def test_df_eval_lazy_two_nodes_up_nonlazy():
     vid0 = df.add_vertex()
     pid0 = df.add_in_port(vid0, "in")
     pid1 = df.add_out_port(vid0, "out")
-    df.set_actor(vid0, FuncNodeSingle({}, {}, int))
+    df.set_actor(vid0, FuncNodeSingle({}, {}, int_function))
     vid1 = df.add_vertex()
     pid2 = df.add_in_port(vid1, "in")
     pid3 = df.add_out_port(vid1, "out")
-    df.set_actor(vid1, FuncNodeSingle({}, {}, int))
+    df.set_actor(vid1, FuncNodeSingle({}, {}, int_function))
     df.connect(pid1, pid2)
     df.actor(vid0).set_lazy(False)
 
@@ -683,11 +690,11 @@ def test_df_eval_lazy_two_nodes_down_nonlazy():
     vid0 = df.add_vertex()
     pid0 = df.add_in_port(vid0, "in")
     pid1 = df.add_out_port(vid0, "out")
-    df.set_actor(vid0, FuncNodeSingle({}, {}, int))
+    df.set_actor(vid0, FuncNodeSingle({}, {}, int_function))
     vid1 = df.add_vertex()
     pid2 = df.add_in_port(vid1, "in")
     pid3 = df.add_out_port(vid1, "out")
-    df.set_actor(vid1, FuncNodeSingle({}, {}, int))
+    df.set_actor(vid1, FuncNodeSingle({}, {}, int_function))
     df.connect(pid1, pid2)
     df.actor(vid1).set_lazy(False)
 

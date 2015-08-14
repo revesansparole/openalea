@@ -40,8 +40,6 @@ def test_dataflow_state_init():
 
     assert len(tuple(dfs.items())) == 0
     assert id(dfs.dataflow()) == id(df)
-    d = dict(dfs.tasks())
-    assert set(d) == {0, 1, 2, 3, 4}
 
 
 def test_dataflow_state_reinit():
@@ -353,7 +351,23 @@ def test_dataflow_state_input_has_changed():
     df = get_dataflow()
     dfs = DataflowState(df)
 
+    # lonely input port
+    assert_raises(KeyError, lambda: dfs.input_has_changed(0))
+
     dfs.set_data(0, 'a')
+    assert dfs.input_has_changed(0)
+    dfs.set_changed(0, False)
+    assert not dfs.input_has_changed(0)
+
+    # output port
+    assert_raises(KeyError, lambda: dfs.input_has_changed(1))
+    dfs.set_data(1, 'b')
+    assert_raises(KeyError, lambda: dfs.input_has_changed(1))
+    dfs.set_changed(1, False)
+    assert_raises(KeyError, lambda: dfs.input_has_changed(1))
+
+    # input ports
+    assert_raises(KeyError, lambda: dfs.input_has_changed(4))
 
     for pid in (1, 2, 5, 7):
         dfs.set_data(pid, pid)
@@ -361,16 +375,12 @@ def test_dataflow_state_input_has_changed():
     dfs.set_changed(2, False)
 
     assert_raises(KeyError, lambda: dfs.input_has_changed(2))
-    assert dfs.input_has_changed(0)
     assert dfs.input_has_changed(3)
     assert dfs.input_has_changed(4)
     assert dfs.input_has_changed(6)
 
     dfs.set_changed(1, False)
     assert not dfs.input_has_changed(3)
-
-    dfs.set_changed(0, False)
-    assert not dfs.input_has_changed(0)
 
     dfs.set_changed(7, False)
     assert not dfs.input_has_changed(4)

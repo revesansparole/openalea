@@ -59,7 +59,7 @@ class EvaluationEnvironment(object):
         """
         self._exec_id = exec_id
 
-    def new_execution(self, exec_id=None):
+    def new_execution(self, exec_id=None, rel_type='>'):
         """ Change execution id to a new unused id.
 
         arg:
@@ -68,7 +68,7 @@ class EvaluationEnvironment(object):
         self._exec_id = self._id_gen.get_id()
 
         if self.record_provenance():
-            self._prov.new_execution(exec_id, self._exec_id)
+            self._prov.new_execution(exec_id, rel_type, self._exec_id)
 
     def record_provenance(self):
         """ Return whether or not execution provenance
