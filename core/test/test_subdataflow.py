@@ -75,6 +75,13 @@ def test_subdataflow_edges():
     assert set(sub.edges()) == {0}
 
 
+def test_subdataflow_in_edges():
+    df = get_df()
+
+    sub = SubDataflow2(df, (0, 2))
+    assert set(sub.in_edges(2)) == {0}
+
+
 def test_subdataflow_out_edges():
     df = get_df()
 

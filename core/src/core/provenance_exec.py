@@ -187,7 +187,7 @@ class ProvenanceExec(object):
     def start_time(self, vid, exec_id):
         # state = self.get_state(exec_id)
         # return state.task_start_time(vid)
-        return self._stored[exec_id][1].get(vid,(None, None))[0]
+        return self._stored[exec_id][1].get(vid, (None, None))[0]
 
     def _find_same_level(self, exec_id):
         """ Return ordered list of execution
@@ -288,38 +288,102 @@ class ProvenanceExec(object):
 
         return self._last_evaluation(vid, exec_id)
 
-    def last_change(self, pid, exec_id):
+    def has_changed(self, pid, exec_id):
+        state = self.get_state(exec_id)  # TODO: optimize
+        if pid not in state:
+            return False
+
+        return state.has_changed(pid)
+
+    def _last_change(self, pid, exec_id):
+        g = self._exec_graph
+        visited = set()
+        front = [exec_id]
+
+        while len(front) > 0:
+            cur = front.pop(-1)
+            visited.add(cur)
+            if self.has_changed(pid, cur):
+                return cur
+
+            # need to add next exec_id to visit in reverse order
+            # visit level above
+            for eid in g.in_edges(cur):
+                if g.edge_property("type")[eid] == EDGE_SUB:
+                    n_exec_id = g.source(eid)
+                    if n_exec_id not in visited:
+                        front.append(g.source(eid))
+
+            # visit previous exec at same level
+            for eid in g.in_edges(cur):
+                if g.edge_property("type")[eid] == EDGE_NEXT:
+                    n_exec_id = g.source(eid)
+                    if n_exec_id not in visited:
+                        front.append(g.source(eid))
+
+            # visit level below
+            subs = set()
+            for eid in g.out_edges(cur):
+                if g.edge_property("type")[eid] == EDGE_SUB:
+                    subs.add(self._find_same_level(g.target(eid)))
+
+            for sub in subs:
+                n_exec_id = sub[0]  # consider only the most recent of all
+                if n_exec_id not in visited:
+                    front.append(n_exec_id)
+
+        raise UserWarning("no valid evaluation found")
+
+    def last_change(self, pid, exec_id=None):
         """ Find the last evaluation that changed this port.
 
         args:
             - pid (pid): id of output port, or lonely input port, to look at
-            - exec_id (eid): id of execution that modified this port data
+            - exec_id (eid): execution to start the search
+                             if None will start from leaf of the graph
+                             or raise an error if there is multiple leaves.
+
+        return:
+            - eid (eid): id of execution where evaluation of node
+                         that changed the data actually occurred
+                         for the last time
         """
-        df = self._dataflow
         g = self._exec_graph
 
-        state = self.get_state(exec_id)  # TODO: optimize
+        if exec_id is None:
+            # find leaves of the execution graph
+            leaves = [eid for eid in g.vertices() if g.nb_out_edges(eid) == 0]
+            if len(leaves) == 0:
+                raise UserWarning("no execution recorded yet")
+            elif len(leaves) > 1:
+                msg = "function ambiguous, need to specify a branch"
+                raise UserWarning(msg)
+            else:
+                exec_id, = leaves
 
-        if df.is_in_port(pid):
-            if df.nb_connections(pid) == 0:  # lonely input port
-                changed = state.has_changed(pid)
-                if changed or g.nb_in_neighbors(exec_id) == 0:
-                    return exec_id
-                else:
-                    p_exec, = tuple(g.in_neighbors(exec_id))
-                    return self.last_change(pid, p_exec)
-            else:
-                raise KeyError("unable to compute last change for in ports")
-        else:  # out port
-            changed = state.has_changed(pid)
-            if changed:
-                return exec_id
-            else:
-                parent_ids = tuple(g.in_neighbors(exec_id))
-                if len(parent_ids) == 0:
-                    raise UserWarning("data never changed????")
-                p_exec, = parent_ids
-                return self.last_change(pid, p_exec)
+        return self._last_change(pid, exec_id)
+
+        # df = self._dataflow
+        # if df.is_in_port(pid):
+        #     if df.nb_connections(pid) == 0:  # lonely input port
+        #         changed = self.has_changed(pid, exec_id)
+        #         if changed or g.nb_in_neighbors(exec_id) == 0:
+        #             return exec_id
+        #         else:
+        #             p_exec, = tuple(g.in_neighbors(exec_id))
+        #             return self.last_change(pid, p_exec)
+        #     else:
+        #         raise KeyError("unable to compute last change for in ports")
+        # else:  # out port
+        #     changed = self.has_changed(pid, exec_id)
+        #     if changed:
+        #         return exec_id
+        #     else:
+        #         parent_ids = tuple(g.in_neighbors(exec_id))
+        #         if len(parent_ids) == 0:
+        #             raise UserWarning("data never changed????")
+        #         p_exec, = parent_ids
+        #         return self.last_change(pid, p_exec)
 
     def provenance(self, pid, exec_id):
         """ Find where does a data come from.

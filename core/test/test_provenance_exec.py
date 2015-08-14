@@ -458,55 +458,85 @@ def test_prov_exec_last_evaluation_sub_parts_atomics4():
 #         assert prov.last_evaluation(vid, eids[i]) == eids[5]
 
 
-def test_prov_exec_last_change():
+def test_prov_exec_last_change_atomic1():
+    #  0 -- 1 (N)
+    #  >
+    #  2 -- 3
     df = DataFlow()
-    vid0 = df.add_vertex()
-    pid0 = df.add_in_port(vid0, 'in')
-    pid1 = df.add_out_port(vid0, 'out')
-    vid1 = df.add_vertex()
-    pid2 = df.add_in_port(vid1, 'in')
-    pid3 = df.add_out_port(vid1, 'out')
-    df.connect(pid1, pid2)
+    vid = df.add_vertex()
+    pidi = df.add_in_port(vid, "in")
+    pido = df.add_out_port(vid, "out")
 
     prov = ProvenanceExec(df)
-    dfs = DataflowState(df)
-    # for i, pid in enumerate([pid0, pid1, pid2, pid3]):
-    #     dfs.set_data(pid, i)
-
-    eid = prov.new_execution()
-    assert_raises(KeyError, lambda: prov.last_change(pid0, eid))
-    assert_raises(KeyError, lambda: prov.last_change(pid1, eid))
-    assert_raises(KeyError, lambda: prov.last_change(pid2, eid))
-    assert_raises(KeyError, lambda: prov.last_change(pid3, eid))
-
-    prov.store(eid, dfs)
-    assert_raises(KeyError, lambda: prov.last_change(pid0, eid))
-
-    prov.clear()
-    dfs.set_data(pid0, 0)
-    dfs.set_data(pid1, 0)
-    dfs.set_data(pid3, 0)
-    dfs.set_changed(pid3, False)
     eid0 = prov.new_execution()
+    eid1 = prov.new_execution(eid0, '/')
+    eid2 = prov.new_execution(eid0, '>')
+    eid3 = prov.new_execution(eid2, '/')
+
+    dfs = DataflowState(df)
     prov.store(eid0, dfs)
-    assert_raises(KeyError, lambda: prov.last_change(pid2, eid0))
-    assert prov.last_change(pid0, eid0) == eid0
-    assert prov.last_change(pid1, eid0) == eid0
-    assert_raises(UserWarning, lambda: prov.last_change(pid3, eid0))
-
-    eid1 = prov.new_execution(eid0)
-    dfs.set_changed(pid0, False)
-    dfs.set_changed(pid1, False)
-    prov.store(eid1, dfs)
-    assert prov.last_change(pid0, eid1) == eid0
-    assert prov.last_change(pid1, eid1) == eid0
-
-    eid2 = prov.new_execution(eid1)
-    dfs.set_changed(pid0, True)
-    dfs.set_changed(pid1, True)
     prov.store(eid2, dfs)
-    assert prov.last_change(pid0, eid2) == eid2
-    assert prov.last_change(pid1, eid2) == eid2
+    prov.store(eid3, dfs)
+    dfs.set_data(pidi, 0)
+    dfs.set_data(pido, 0)
+    prov.store(eid1, dfs)
+
+    assert_raises(UserWarning, lambda: prov.last_change(pidi))
+    assert_raises(UserWarning, lambda: prov.last_change(pido))
+    for eid in (eid0, eid1, eid2, eid3):
+        assert prov.last_change(pidi, eid) == eid1
+        assert prov.last_change(pido, eid) == eid1
+
+
+# def test_prov_exec_last_change():
+#     df = DataFlow()
+#     vid0 = df.add_vertex()
+#     pid0 = df.add_in_port(vid0, 'in')
+#     pid1 = df.add_out_port(vid0, 'out')
+#     vid1 = df.add_vertex()
+#     pid2 = df.add_in_port(vid1, 'in')
+#     pid3 = df.add_out_port(vid1, 'out')
+#     df.connect(pid1, pid2)
+#
+#     prov = ProvenanceExec(df)
+#     dfs = DataflowState(df)
+#     # for i, pid in enumerate([pid0, pid1, pid2, pid3]):
+#     #     dfs.set_data(pid, i)
+#
+#     eid = prov.new_execution()
+#     assert_raises(KeyError, lambda: prov.last_change(pid0, eid))
+#     assert_raises(KeyError, lambda: prov.last_change(pid1, eid))
+#     assert_raises(KeyError, lambda: prov.last_change(pid2, eid))
+#     assert_raises(KeyError, lambda: prov.last_change(pid3, eid))
+#
+#     prov.store(eid, dfs)
+#     assert_raises(KeyError, lambda: prov.last_change(pid0, eid))
+#
+#     prov.clear()
+#     dfs.set_data(pid0, 0)
+#     dfs.set_data(pid1, 0)
+#     dfs.set_data(pid3, 0)
+#     dfs.set_changed(pid3, False)
+#     eid0 = prov.new_execution()
+#     prov.store(eid0, dfs)
+#     assert_raises(KeyError, lambda: prov.last_change(pid2, eid0))
+#     assert prov.last_change(pid0, eid0) == eid0
+#     assert prov.last_change(pid1, eid0) == eid0
+#     assert_raises(UserWarning, lambda: prov.last_change(pid3, eid0))
+#
+#     eid1 = prov.new_execution(eid0)
+#     dfs.set_changed(pid0, False)
+#     dfs.set_changed(pid1, False)
+#     prov.store(eid1, dfs)
+#     assert prov.last_change(pid0, eid1) == eid0
+#     assert prov.last_change(pid1, eid1) == eid0
+#
+#     eid2 = prov.new_execution(eid1)
+#     dfs.set_changed(pid0, True)
+#     dfs.set_changed(pid1, True)
+#     prov.store(eid2, dfs)
+#     assert prov.last_change(pid0, eid2) == eid2
+#     assert prov.last_change(pid1, eid2) == eid2
 
 
 def test_prov_exec_provenance_single_node():

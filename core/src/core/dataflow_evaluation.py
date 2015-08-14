@@ -105,6 +105,8 @@ class BruteEvaluation(AbstractEvaluation):
         self._evaluated.clear()
 
     def eval(self, env, state, vid=None):
+        df = self._dataflow
+
         if not state.is_ready_for_evaluation():
             raise EvaluationError("state not ready for evaluation")
 
@@ -112,7 +114,6 @@ class BruteEvaluation(AbstractEvaluation):
             raise EvaluationError("Current execution id is None")
 
         if vid is None:  # start evaluation from leaves in the dataflow
-            df = self._dataflow
             leaves = [vid for vid in df.vertices() if df.nb_out_edges(vid) == 0]
             # TODO: Hack remove CompositeNodeInput and CompositeNodeInput
             from openalea.core.compositenode import (CompositeNodeInput,
@@ -132,6 +133,12 @@ class BruteEvaluation(AbstractEvaluation):
         if env.record_provenance():
             prov = env.provenance()
             prov.store(env.current_execution(), state)
+
+        # change the state of data on lonely input ports
+        for vid in df.vertices():
+            if df.nb_in_edges(vid) == 0:
+                for pid in df.in_ports(vid):
+                    state.set_changed(pid, False)
 
     def eval_from_node(self, env, state, vid):
         """ Evaluate dataflow from a given node.
@@ -169,10 +176,10 @@ class BruteEvaluation(AbstractEvaluation):
 
         # find input values
         inputs = [state.get_data(pid) for pid in df.in_ports(vid)]
-        # tag input values as unchanged if necessary
-        for pid in df.in_ports(vid):
-            if df.nb_connections(pid) == 0:
-                state.set_changed(pid, False)
+        # # tag input values as unchanged if necessary
+        # for pid in df.in_ports(vid):
+        #     if df.nb_connections(pid) == 0:
+        #         state.set_changed(pid, False)
 
         # perform computation
         state.task_started(vid)

@@ -70,6 +70,8 @@ class EvaluationEnvironment(object):
         if self.record_provenance():
             self._prov.new_execution(exec_id, rel_type, self._exec_id)
 
+        return self._exec_id
+
     def record_provenance(self):
         """ Return whether or not execution provenance
         should be recorded during this execution.
