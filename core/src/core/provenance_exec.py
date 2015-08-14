@@ -185,10 +185,11 @@ class ProvenanceExec(object):
         self._stored[exec_id] = (dp, dv)
 
     def start_time(self, vid, exec_id):
-        state = self.get_state(exec_id)  # TODO: optimize
-        return state.task_start_time(vid)
+        # state = self.get_state(exec_id)
+        # return state.task_start_time(vid)
+        return self._stored[exec_id][1].get(vid,(None, None))[0]
 
-    def find_same_level(self, exec_id):
+    def _find_same_level(self, exec_id):
         """ Return ordered list of execution
         at this level of decomposition.
 
@@ -248,7 +249,7 @@ class ProvenanceExec(object):
             subs = set()
             for eid in g.out_edges(cur):
                 if g.edge_property("type")[eid] == EDGE_SUB:
-                    subs.add(self.find_same_level(g.target(eid)))
+                    subs.add(self._find_same_level(g.target(eid)))
 
             for sub in subs:
                 n_exec_id = sub[0]  # consider only the most recent of all
