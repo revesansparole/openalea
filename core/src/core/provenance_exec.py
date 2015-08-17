@@ -226,6 +226,9 @@ class ProvenanceExec(object):
 
         while len(front) > 0:
             cur = front.pop(-1)
+            if cur in visited:
+                continue
+
             visited.add(cur)
             if self.start_time(vid, cur) is not None:
                 return cur
@@ -302,6 +305,9 @@ class ProvenanceExec(object):
 
         while len(front) > 0:
             cur = front.pop(-1)
+            if cur in visited:
+                continue
+
             visited.add(cur)
             if self.has_changed(pid, cur):
                 return cur

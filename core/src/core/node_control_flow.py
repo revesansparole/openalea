@@ -256,6 +256,9 @@ class MapNode(ControlFlowNode):
     def perform_evaluation(self, algo, env, state, vid):
         df = algo.dataflow()
         exec_id = env.current_execution()
+        state.task_started(vid)
+
+        loc_state = state.clone(df)
 
         try:  # TODO: hack to work around visualea re implementation of local id
             pid_out = df.out_port(vid, "out")
@@ -268,7 +271,7 @@ class MapNode(ControlFlowNode):
         except PortError:
             pid_func = df.in_port(vid, 0)
         sub_func = get_upstream_subdataflow(df, pid_func)
-        ss_func = state.clone(sub_func)
+        ss_func = loc_state.clone(sub_func)
         algo_func = algo.clone(sub_func)
         # xnodes = [(state.get_data(df.in_port(lvid, "order")),
         #            df.out_port(lvid, "out")) for lvid in sub_func.vertices()
@@ -285,7 +288,7 @@ class MapNode(ControlFlowNode):
                     pid_order = df.in_port(lvid, "order")
                 except PortError:
                     pid_order = df.in_port(lvid, 0)
-                xnodes.append((state.get_data(pid_order), pout))
+                xnodes.append((loc_state.get_data(pid_order), pout))
 
         xnodes.sort()
         arg_pids = [pid for order, pid in xnodes]
@@ -296,18 +299,20 @@ class MapNode(ControlFlowNode):
         except PortError:
             pid_seq = df.in_port(vid, 1)
         sub_seq = get_upstream_subdataflow(df, pid_seq)
-        ss_seq = state.clone(sub_seq)
+        ss_seq = loc_state.clone(sub_seq)
         algo_seq = algo.clone(sub_seq)
 
         # eval "seq" dataflow
-        env.new_execution()
+        eid = env.new_execution(exec_id, '/')
         algo_seq.eval(env, ss_seq)
-        state.update(ss_seq)
-        seq = state.get_data(pid_seq)
+        loc_state.update(ss_seq)
+        seq = loc_state.get_data(pid_seq)
 
         res = []
         for item in seq:
-            env.new_execution()
+            eid = env.new_execution(eid)
+            if env.record_provenance():
+                env.provenance().add_link(exec_id, eid, '/')  # TODO: potential troubles
 
             # set item in value in ss_func if needed
             ss_func.update(ss_seq)
@@ -322,10 +327,11 @@ class MapNode(ControlFlowNode):
             # eval 'func' dataflow
             algo_func.clear()
             algo_func.eval(env, ss_func)
-            state.update(ss_func)
+            loc_state.update(ss_func)
 
-            res.append(state.get_data(pid_func))
+            res.append(loc_state.get_data(pid_func))
 
+        state.task_ended(vid)
         # fill ports with result
         state.set_data(pid_out, res)
 
