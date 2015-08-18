@@ -219,6 +219,37 @@ class MainWindow(qt.QtGui.QMainWindow,
         #############
         # Provenance
         #############
+        self.menu_provenance = qt.QtGui.QMenu(self.menubar)
+        self.menu_provenance.setObjectName("menu_provenance")
+        self.menu_provenance.setTitle(
+            qt.QtGui.QApplication.translate("MainWindow",
+                                            "&Provenance",
+                                            None,
+                                            qt.QtGui.QApplication.UnicodeUTF8))
+
+        self.action_activ_prov = qt.QtGui.QAction(self)
+        self.action_activ_prov.setCheckable(True)
+        self.action_activ_prov.setChecked(True)
+        self.action_activ_prov.setObjectName("action_activ_prov")
+        self.action_activ_prov.setText(
+            qt.QtGui.QApplication.translate("MainWindow",
+                                            "Connect/Disconnect Provenance",
+                                            None,
+                                            qt.QtGui.QApplication.UnicodeUTF8))
+
+        self.action_reload_state = qt.QtGui.QAction(self)
+        self.action_reload_state.setObjectName("action_reload_state")
+        self.action_reload_state.setText(
+            qt.QtGui.QApplication.translate("MainWindow", "Reload State", None,
+                                            qt.QtGui.QApplication.UnicodeUTF8))
+
+        self.menu_provenance.addAction(self.action_activ_prov)
+        self.menu_provenance.addAction(self.action_reload_state)
+
+        self.menubar.addAction(self.menu_provenance.menuAction())
+
+        self.action_reload_state.triggered.connect(self.reload_state_dialog)
+
         if PROVENANCE:
             self.menu_provenance = qt.QtGui.QMenu(self.menubar)
             self.menu_provenance.setObjectName("menu_provenance")
@@ -243,6 +274,45 @@ class MainWindow(qt.QtGui.QMainWindow,
 
             self.action_activ_prov.toggled.connect(self.set_provenance)
             self.action_show_prov.triggered.connect(self.show_provenance)
+
+    def reload_state_dialog(self, *args, **kargs):  # TODO: hack, remove from here
+        dia = qt.QtGui.QDialog(self)
+        dia.setWindowTitle("Select Execution to reload")
+        lv = qt.QtGui.QListWidget(dia)
+
+        ws = self.session.get_current_workspace()
+        prov = ws._eval_env.provenance()
+        g = prov.execution_graph()
+        for vid in g:
+            lv.addItem(str(vid))
+
+        lv.itemClicked.connect(self.reload_state)
+        lv.itemClicked.connect(dia.close)
+        dia.show()
+
+    def reload_state(self, item):  # TODO: hack, remove from here
+        exec_id = int(str(item.text()))
+        ws = self.session.get_current_workspace()
+        prov = ws._eval_env.provenance()
+        if exec_id in prov:
+            df = ws._dataflow
+            state = prov.get_state(exec_id)
+            print "state", state
+            ws._state.clear()
+            ws._state.update(state)
+
+            #clear all out ports
+            for pid in df.out_ports():
+                node = ws.node(df.vertex(pid))
+                lpid = df.local_id(pid)
+                node.set_output(lpid, None)
+
+            for pid, val in state.items():
+                if df.is_out_port(pid):
+                    node = ws.node(df.vertex(pid))
+                    lpid = df.local_id(pid)
+                    val = state.get_data(pid)
+                    node.set_output(lpid, val)
 
     def set_provenance(self, provenance):
         """

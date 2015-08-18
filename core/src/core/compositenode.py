@@ -72,6 +72,7 @@ class CompositeNode(Node):
 
         # objects used by new evaluation algorithms
         self._eval_env = EvaluationEnvironment()
+        self._eval_env.set_provenance(self._dataflow)  # TODO: hack use option
         self._state = DataflowState(self._dataflow)
         self._dataflow_hash = hash_dataflow(self._dataflow)
 
@@ -358,14 +359,12 @@ class CompositeNode(Node):
                     env.clear()
                     self._state = DataflowState(df)
 
-                # state = DataflowState(self._dataflow)  # TODO keep state over evaluations
                 state = self._state
 
                 # fill lonely input ports if needed
-                # assume no change in dataflow at this point # TODO
                 for pid in df.in_ports():
                     if df.nb_connections(pid) == 0:
-                        if pid not in state._state: # TODO: hack access internal
+                        if pid not in state:
                             node = self.node(df.vertex(pid))
                             lpid = df.local_id(pid)
                             val = node.inputs[lpid]
@@ -377,11 +376,12 @@ class CompositeNode(Node):
                 algo.eval(env, state, vtx_id)
 
                 # copy data back in nodes
-                for pid in df.out_ports():
-                    node = self.node(self._dataflow.vertex(pid))
-                    lpid = df.local_id(pid)
-                    val = state.get_data(pid)
-                    node.set_output(lpid, val)
+                for pid, val in state.items():
+                    if df.is_out_port(pid):
+                        node = self.node(df.vertex(pid))
+                        lpid = df.local_id(pid)
+                        val = state.get_data(pid)
+                        node.set_output(lpid, val)
             else:  # old algos
                 algo.eval(vtx_id, step=step)
         finally:

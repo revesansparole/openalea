@@ -168,8 +168,7 @@ class ProvenanceExec(object):
             - exec_id (eid): unique id for a given execution
             - state (DataFlowState): a state to store
         """
-        if exec_id in self._stored:
-            raise KeyError("execution already stored")
+        print "STORE", exec_id
 
         if exec_id not in self._exec_graph:
             raise KeyError("execution id hasn't been recorded")
@@ -177,8 +176,13 @@ class ProvenanceExec(object):
         if not state.is_valid_against(self._dataflow):
             raise UserWarning("Unable to store this state")
 
-        dv = dict(state.tasks())
-        dp = {}
+        if exec_id in self._stored:
+            dp, dv = self._stored[exec_id]
+        else:
+            dp = {}
+            dv = {}
+
+        dv.update(state.tasks())
         for pid, data in state.items():
             dp[pid] = (state.has_changed(pid), data)
 

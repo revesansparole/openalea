@@ -88,14 +88,39 @@ def test_prov_exec_contains():
 
 def test_prov_exec_store():
     df = DataFlow()
+    vid = df.add_vertex()
+    df.add_out_port(vid, "o0", 0)
+    df.add_out_port(vid, "o1", 1)
+    df.add_out_port(vid, "o2", 2)
+
     dfs = DataflowState(df)
 
-    prov = ProvenanceExec(None)
+    prov = ProvenanceExec(df)
     eid = prov.new_execution()
 
     prov.store(eid, dfs)
 
-    assert_raises(KeyError, lambda: prov.store(eid, dfs))
+    # test that successive store with same id
+    # update values in store dictionaries
+    dfs = DataflowState(df)
+    dfs.set_data(0,'a')
+    prov.store(eid, dfs)
+
+    dfs = DataflowState(df)
+    dfs.set_data(1,'b')
+    prov.store(eid, dfs)
+
+    state = prov.get_state(eid)
+    assert state.get_data(0) == 'a'
+    assert state.get_data(1) == 'b'
+
+    dfs = DataflowState(df)
+    dfs.set_data(1,'c')
+    prov.store(eid, dfs)
+
+    state = prov.get_state(eid)
+    assert state.get_data(0) == 'a'
+    assert state.get_data(1) == 'c'
 
 
 def test_prov_exec_store_subdataflow():
