@@ -227,7 +227,7 @@ class CompositeNode(Node):
         args:
             - eid (eid): id of edge to remove.
         """
-        target = self._dataflow.target(eid)
+        target = self._dataflow.target_port(eid)
         # try:
         port = self._dataflow.port(target)
         # except PortError:  # TODO: why??? in which case this happen
