@@ -76,26 +76,26 @@ def iter_groups():
         yield group
 
 
-# def iter_plugins(group, name=None, debug=False):
-#     for ep in pkg_resources.iter_entry_points(group, name):
-#         if debug is True or debug == 'all' or debug == group:
-#             ep = ep.load()
-#             if isinstance(ep, (list, tuple)):
-#                 for item in ep:
-#                     yield item
-#             else:
-#                 yield ep
-#         else:
-#             try:
-#                 ep = ep.load()
-#             except Exception, err:
-#                 print err
-#             else:
-#                 if isinstance(ep, (list, tuple)):
-#                     for item in ep:
-#                         yield item
-#                 else:
-#                     yield ep
+def iter_plugins(group, name=None, debug=False):
+    for ep in pkg_resources.iter_entry_points(group, name):
+        if debug is True or debug == 'all' or debug == group:
+            ep = ep.load()
+            if isinstance(ep, (list, tuple)):
+                for item in ep:
+                    yield item
+            else:
+                yield ep
+        else:
+            try:
+                ep = ep.load()
+            except Exception, err:
+                print err
+            else:
+                if isinstance(ep, (list, tuple)):
+                    for item in ep:
+                        yield item
+                else:
+                    yield ep
 
 
 class IPlugin(object):

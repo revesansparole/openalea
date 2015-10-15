@@ -8,9 +8,17 @@ for pl in plugins(group='openalea.core'):
     print pl
 
 
-pl = plugin("openalea.core.plugin.builtin:PythonModel", group='openalea.core')
+pl = plugin("openalea.core.plugin.builtin:PythonFile", group='openalea.core')
 # TODO: pb, need the group attribute even with a unique id
 
-PythonModel = pl.implementation
+PythonFile = pl.implementation
 
-m = PythonModel()
+pyfile = PythonFile(path="pluggin_user_case.py")
+
+print dir(pyfile)
+print pyfile.dtype
+print pyfile.mimetype
+print pyfile.extension
+print pyfile.content
+
+
