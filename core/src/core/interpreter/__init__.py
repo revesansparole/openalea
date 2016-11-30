@@ -41,7 +41,7 @@ def _interpreter_class():
     try:
         from openalea.core.interpreter.ipython import Interpreter
     except ImportError:
-        from code import InteractiveInterpreter
+        from code import InteractiveInterpreter as Interpreter
 
     return Interpreter
 
