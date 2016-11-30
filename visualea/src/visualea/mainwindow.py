@@ -28,7 +28,7 @@ generate_pyfile_from_uifile(__name__, src=src, dest=dest)
 import ui_mainwindow
 try:
     from openalea.oalab.shell import get_shell_class
-    from openalea.core.service.ipython import interpreter as get_interpreter
+    from openalea.core.service.ipython import interpreter as get_interpreter_class
 except ImportError:
     from openalea.vpltk.shell.shell import get_shell_class, get_interpreter_class
 
